@@ -37,6 +37,16 @@ Item Level: 80
 --------
 +119 to Accuracy Rating"""
 
+# Test omen data
+omen_data = """Item Class: Omen
+Rarity: Currency
+Omen of Refreshment
+--------
+While this item is active in your inventory will
+fully recover your flask and charm charges when you reach Low Life
+--------
+Right click this item in your inventory to set it to be active. This item is consumed when triggered. Only one Omen can be triggered from combat in each instance."""
+
 # Test weapon data
 weapon_data = """Item Class: Wands
 Rarity: Unique
@@ -349,5 +359,10 @@ for item in items:
 
 print("\nTesting Weapon Items:")
 items = parser.parse_items(weapon_data)
+for item in items:
+    print_item(item)
+
+print("\nTesting Omen Items:")
+items = parser.parse_items(omen_data)
 for item in items:
     print_item(item)

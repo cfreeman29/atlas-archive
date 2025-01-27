@@ -6,6 +6,7 @@ class ItemParser:
         self._amulet_counts = {}  # Store amulet counts by type
         self._armor_counts = {}  # Store armor counts by type
         self._weapon_counts = {}  # Store weapon counts by type
+        self._omen_counts = {}  # Store omen counts by type
 
     def _extract_base_type(self, name, keywords):
         """Helper to extract base type from a magic/normal item name."""
@@ -222,6 +223,16 @@ class ItemParser:
                         else:
                             self._weapon_counts[base_type] += 1
 
+            elif current_item['item_class'] == 'Omen':
+                # Handle omens - count occurrences
+                if current_item['name']:
+                    # Strip any existing 'xN' from the name
+                    name = current_item['name'].split(' x')[0]
+                    if name not in self._omen_counts:
+                        self._omen_counts[name] = 1
+                    else:
+                        self._omen_counts[name] += 1
+
             elif current_item['item_class'] in ['Helmets', 'Body Armours', 'Gloves', 'Boots', 'Belts']:
                 # Handle armor pieces - extract base type and count occurrences
                 if current_item['name']:
@@ -312,6 +323,15 @@ class ItemParser:
                 'stack_size': count
             })
 
+        # Add omen counts as separate items
+        for key, count in self._omen_counts.items():
+            items.append({
+                'item_class': 'Omen',
+                'rarity': 'Currency',
+                'name': key,
+                'stack_size': count
+            })
+
         # Reset state for next parse
         self._items = {}
         self._waystone_counts = {}
@@ -319,4 +339,5 @@ class ItemParser:
         self._amulet_counts = {}
         self._armor_counts = {}
         self._weapon_counts = {}
+        self._omen_counts = {}
         return items
