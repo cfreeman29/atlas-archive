@@ -112,8 +112,16 @@ class ItemParser:
             elif current_item['item_class'] == 'Rings':
                 # Handle rings - extract type and count occurrences
                 if current_item['name']:
+                    # For unique items, use the unique name
+                    if current_item['rarity'] == 'Unique':
+                        # Strip any existing 'xN' from the name
+                        name = current_item['name'].split(' x')[0]
+                        if name not in self._ring_counts:
+                            self._ring_counts[name] = 1
+                        else:
+                            self._ring_counts[name] += 1
                     # For rare items, check next line for the actual ring type
-                    if current_item['rarity'] == 'Rare':
+                    elif current_item['rarity'] == 'Rare':
                         # Get the next line after the rare name
                         block_index = None
                         for i, block in enumerate(blocks):
@@ -151,13 +159,21 @@ class ItemParser:
             elif current_item['item_class'] == 'Amulets':
                 # Handle amulets - extract type and count occurrences
                 if current_item['name']:
-                    # Find the word before "Amulet" in the name
-                    base_type = self._extract_base_type(current_item['name'], ['Amulet'])
-                    if base_type:
-                        if base_type not in self._amulet_counts:
-                            self._amulet_counts[base_type] = 1
+                    if current_item['rarity'] == 'Unique':
+                        # For unique items, use the unique name
+                        name = current_item['name'].split(' x')[0]
+                        if name not in self._amulet_counts:
+                            self._amulet_counts[name] = 1
                         else:
-                            self._amulet_counts[base_type] += 1
+                            self._amulet_counts[name] += 1
+                    else:
+                        # For non-unique items, find the word before "Amulet" in the name
+                        base_type = self._extract_base_type(current_item['name'], ['Amulet'])
+                        if base_type:
+                            if base_type not in self._amulet_counts:
+                                self._amulet_counts[base_type] = 1
+                            else:
+                                self._amulet_counts[base_type] += 1
 
             elif current_item['item_class'] in ['Wands', 'Two Hand Maces', 'Bows', 'Staves', 'Quivers', 'Shields', 'Crossbows', 'Foci', 'Sceptres', 'Quarterstaves']:
                 # Handle weapons - extract base type and count occurrences
@@ -178,7 +194,10 @@ class ItemParser:
                     
                     keywords = weapon_keywords[current_item['item_class']]
                     
-                    if current_item['rarity'] in ['Rare', 'Unique']:
+                    if current_item['rarity'] == 'Unique':
+                        # For unique items, use the unique name instead of base type
+                        base_type = current_item['name']
+                    elif current_item['rarity'] == 'Rare':
                         # Get the base type from the line after the name
                         block_index = None
                         for i, block in enumerate(blocks):
@@ -217,7 +236,10 @@ class ItemParser:
                     
                     keywords = armor_keywords[current_item['item_class']]
                     
-                    if current_item['rarity'] in ['Rare', 'Unique']:
+                    if current_item['rarity'] == 'Unique':
+                        # For unique items, use the unique name instead of base type
+                        base_type = current_item['name']
+                    elif current_item['rarity'] == 'Rare':
                         # Get the base type from the line after the name
                         block_index = None
                         for i, block in enumerate(blocks):
