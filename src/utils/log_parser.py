@@ -39,7 +39,9 @@ class LogParser:
                             # Extract map name and boss status
                             # Format is "Map<name>_NoBoss" or "Map<name>"
                             map_parts = area_name.split('_')
-                            map_name = map_parts[0][3:]  # Remove "Map" prefix
+                            # Remove "Map" prefix and add spaces before capital letters (except first letter)
+                            raw_name = map_parts[0][3:]  # Remove "Map" prefix
+                            map_name = re.sub(r'(?<!^)(?=[A-Z])', ' ', raw_name)
                             has_boss = not (len(map_parts) > 1 and map_parts[1] == 'NoBoss')
                             
                             # Map start event
