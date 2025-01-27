@@ -138,8 +138,25 @@ class ItemEntryDialog(QDialog):
                 not name.startswith('Stack Size:') and 
                 not name.startswith('Rarity:')):
                 quantity = item.get('stack_size', 1)
-                item_label = QLabel(f"{name} x{quantity}")
-                item_label.setStyleSheet("color: #cccccc;")
+                rarity = item.get('display_rarity', 'Normal')
+                
+                # Extract name and rarity
+                name_parts = name.rsplit('_', 1)
+                display_name = name_parts[0]
+                rarity = item.get('display_rarity', 'Normal')
+                
+                # Color mapping based on rarity
+                rarity_colors = {
+                    'Normal': '#ffffff',  # White
+                    'Magic': '#8888ff',   # Blue
+                    'Rare': '#ffff77',    # Yellow
+                    'Unique': '#af6025',  # Orange/Brown
+                    'Currency': '#aa9e82'  # Currency color
+                }
+                
+                color = rarity_colors.get(rarity, '#cccccc')
+                item_label = QLabel(f"{display_name} x{quantity}")
+                item_label.setStyleSheet(f"color: {color};")
                 self.items_layout.addWidget(item_label)
         
         self.items_layout.addStretch()

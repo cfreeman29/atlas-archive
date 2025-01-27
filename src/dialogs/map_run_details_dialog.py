@@ -91,14 +91,31 @@ class MapRunDetailsDialog(QDialog):
         scroll_layout.setContentsMargins(10, 10, 10, 10)
         
         for item in self.run_data['items']:
-            if (item['name'] != 'Unknown Item' and 
+                if (item['name'] != 'Unknown Item' and 
                 not item['name'].startswith('Item Class:') and 
                 not item['name'].startswith('Stack Size:') and 
                 not item['name'].startswith('Rarity:')):
-                item_text = f"{item['name']} x{item['stack_size']}"
-                item_label = QLabel(item_text)
-                item_label.setStyleSheet("color: #cccccc;")
-                scroll_layout.addWidget(item_label)
+                    # Extract name and rarity
+                    name = item['name']
+                    name_parts = name.rsplit('_', 1)
+                    display_name = name_parts[0]
+                    # Get rarity from name suffix if available, otherwise fallback to display_rarity
+                    rarity = name_parts[1] if len(name_parts) > 1 else item.get('display_rarity', 'Normal')
+                    
+                    # Color mapping based on rarity
+                    rarity_colors = {
+                        'Normal': '#ffffff',  # White
+                        'Magic': '#8888ff',   # Blue
+                        'Rare': '#ffff77',    # Yellow
+                        'Unique': '#af6025',  # Orange/Brown
+                        'Currency': '#aa9e82'  # Currency color
+                    }
+                    
+                    color = rarity_colors.get(rarity, '#cccccc')
+                    item_text = f"{display_name} x{item['stack_size']}"
+                    item_label = QLabel(item_text)
+                    item_label.setStyleSheet(f"color: {color};")
+                    scroll_layout.addWidget(item_label)
         
         if not self.run_data['items']:
             no_items = QLabel("No items recorded")

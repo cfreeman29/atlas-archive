@@ -8,6 +8,13 @@ class ItemParser:
         self._weapon_counts = {}  # Store weapon counts by type
         self._omen_counts = {}  # Store omen counts by type
         self._jewel_counts = {}  # Store jewel counts by type
+        
+        # Store rarity information for each item type
+        self._ring_rarities = {}
+        self._amulet_rarities = {}
+        self._armor_rarities = {}
+        self._weapon_rarities = {}
+        self._jewel_rarities = {}
 
     def _extract_base_type(self, name, keywords):
         """Helper to extract base type from a magic/normal item name."""
@@ -60,7 +67,8 @@ class ItemParser:
                 'rarity': None,
                 'name': None,
                 'stack_size': None,
-                'waystone_tier': None
+                'waystone_tier': None,
+                'display_rarity': None  # For UI coloring
             }
             
             # Extract item details from block
@@ -71,7 +79,9 @@ class ItemParser:
                     if i + 2 < len(block):
                         current_item['name'] = block[i + 2]
                 elif line.startswith('Rarity:'):
-                    current_item['rarity'] = line.split(':', 1)[1].strip()
+                    rarity = line.split(':', 1)[1].strip()
+                    current_item['rarity'] = rarity
+                    current_item['display_rarity'] = rarity  # Set display rarity when parsing
                 elif line.startswith('Stack Size:'):
                     try:
                         amount = int(line.split(':', 1)[1].strip().split('/')[0])
@@ -89,13 +99,16 @@ class ItemParser:
             if current_item['item_class'] == 'Stackable Currency':
                 # Handle stackable currency - combine stack sizes
                 if current_item['name'] and current_item['stack_size']:
-                    name = current_item['name']
+                    name = f"{current_item['name']}_{current_item['rarity']}"  # Append rarity to name
                     if name in self._items:
                         # Update existing item's stack size
                         self._items[name]['stack_size'] += current_item['stack_size']
                     else:
-                        # Add new item
-                        self._items[name] = current_item.copy()
+                        # Add new item with Currency display rarity
+                        item_copy = current_item.copy()
+                        item_copy['name'] = name  # Store name with rarity
+                        item_copy['display_rarity'] = 'Currency'
+                        self._items[name] = item_copy
                     # Reset stack size but keep other item details
                     current_item['stack_size'] = None
 
@@ -120,6 +133,7 @@ class ItemParser:
                         name = current_item['name'].split(' x')[0]
                         if name not in self._ring_counts:
                             self._ring_counts[name] = 1
+                            self._ring_rarities[name] = 'Unique'
                         else:
                             self._ring_counts[name] += 1
                     # For rare items, check next line for the actual ring type
@@ -146,6 +160,7 @@ class ItemParser:
                                         key = f"{ring_type} Ring"
                                         if key not in self._ring_counts:
                                             self._ring_counts[key] = 1
+                                            self._ring_rarities[key] = 'Rare'
                                         else:
                                             self._ring_counts[key] += 1
                                         break
@@ -153,10 +168,12 @@ class ItemParser:
                         # For non-rare items, process normally
                         base_type = self._extract_base_type(current_item['name'], ['Ring'])
                         if base_type:
-                            if base_type not in self._ring_counts:
-                                self._ring_counts[base_type] = 1
+                            key = f"{base_type}_{current_item['rarity']}"
+                            if key not in self._ring_counts:
+                                self._ring_counts[key] = 1
+                                self._ring_rarities[key] = current_item['rarity']
                             else:
-                                self._ring_counts[base_type] += 1
+                                self._ring_counts[key] += 1
 
             elif current_item['item_class'] == 'Amulets':
                 # Handle amulets - extract type and count occurrences
@@ -166,16 +183,19 @@ class ItemParser:
                         name = current_item['name'].split(' x')[0]
                         if name not in self._amulet_counts:
                             self._amulet_counts[name] = 1
+                            self._amulet_rarities[name] = 'Unique'
                         else:
                             self._amulet_counts[name] += 1
                     else:
                         # For non-unique items, find the word before "Amulet" in the name
                         base_type = self._extract_base_type(current_item['name'], ['Amulet'])
                         if base_type:
-                            if base_type not in self._amulet_counts:
-                                self._amulet_counts[base_type] = 1
+                            key = f"{base_type}_{current_item['rarity']}"
+                            if key not in self._amulet_counts:
+                                self._amulet_counts[key] = 1
+                                self._amulet_rarities[key] = current_item['rarity']
                             else:
-                                self._amulet_counts[base_type] += 1
+                                self._amulet_counts[key] += 1
 
             elif current_item['item_class'] in ['Wands', 'Two Hand Maces', 'Bows', 'Staves', 'Quivers', 'Shields', 'Crossbows', 'Foci', 'Sceptres', 'Quarterstaves']:
                 # Handle weapons - extract base type and count occurrences
@@ -219,10 +239,12 @@ class ItemParser:
                     if base_type:
                         # Strip any existing 'xN' from the name
                         base_type = base_type.split(' x')[0]
-                        if base_type not in self._weapon_counts:
-                            self._weapon_counts[base_type] = 1
+                        key = f"{base_type}_{current_item['rarity']}"
+                        if key not in self._weapon_counts:
+                            self._weapon_counts[key] = 1
+                            self._weapon_rarities[key] = current_item['rarity']
                         else:
-                            self._weapon_counts[base_type] += 1
+                            self._weapon_counts[key] += 1
 
             elif current_item['item_class'] == 'Jewels':
                 # Handle jewels - extract type and count occurrences
@@ -257,10 +279,12 @@ class ItemParser:
                     if base_type:
                         # Strip any existing 'xN' from the name
                         base_type = base_type.split(' x')[0]
-                        if base_type not in self._jewel_counts:
-                            self._jewel_counts[base_type] = 1
+                        key = f"{base_type}_{current_item['rarity']}"
+                        if key not in self._jewel_counts:
+                            self._jewel_counts[key] = 1
+                            self._jewel_rarities[key] = current_item['rarity']
                         else:
-                            self._jewel_counts[base_type] += 1
+                            self._jewel_counts[key] += 1
 
             elif current_item['item_class'] == 'Omen':
                 # Handle omens - count occurrences
@@ -320,10 +344,12 @@ class ItemParser:
                     if base_type:
                         # Strip any existing 'xN' from the name
                         base_type = base_type.split(' x')[0]
-                        if base_type not in self._armor_counts:
-                            self._armor_counts[base_type] = 1
+                        key = f"{base_type}_{current_item['rarity']}"
+                        if key not in self._armor_counts:
+                            self._armor_counts[key] = 1
+                            self._armor_rarities[key] = current_item['rarity']
                         else:
-                            self._armor_counts[base_type] += 1
+                            self._armor_counts[key] += 1
         
         # Combine results from both parsing methods
         items = list(self._items.values())
@@ -334,43 +360,52 @@ class ItemParser:
                 'item_class': 'Waystones',
                 'rarity': 'Normal',
                 'name': key,
-                'stack_size': count
+                'stack_size': count,
+                'display_rarity': 'Normal'  # For UI coloring
             })
         
         # Add ring counts as separate items
         for key, count in self._ring_counts.items():
+            rarity = self._ring_rarities.get(key, 'Normal')
             items.append({
                 'item_class': 'Rings',
-                'rarity': 'Normal',
+                'rarity': rarity,
                 'name': key,
-                'stack_size': count
+                'stack_size': count,
+                'display_rarity': rarity  # For UI coloring
             })
 
         # Add amulet counts as separate items
         for key, count in self._amulet_counts.items():
+            rarity = self._amulet_rarities.get(key, 'Normal')
             items.append({
                 'item_class': 'Amulets',
-                'rarity': 'Normal',
+                'rarity': rarity,
                 'name': key,
-                'stack_size': count
+                'stack_size': count,
+                'display_rarity': rarity  # For UI coloring
             })
 
         # Add armor counts as separate items
         for key, count in self._armor_counts.items():
+            rarity = self._armor_rarities.get(key, 'Normal')
             items.append({
                 'item_class': 'Armor',
-                'rarity': 'Normal',
+                'rarity': rarity,
                 'name': key,
-                'stack_size': count
+                'stack_size': count,
+                'display_rarity': rarity  # For UI coloring
             })
 
         # Add weapon counts as separate items
         for key, count in self._weapon_counts.items():
+            rarity = self._weapon_rarities.get(key, 'Normal')
             items.append({
                 'item_class': 'Weapons',
-                'rarity': 'Normal',
+                'rarity': rarity,
                 'name': key,
-                'stack_size': count
+                'stack_size': count,
+                'display_rarity': rarity  # For UI coloring
             })
 
         # Add omen counts as separate items
@@ -379,16 +414,19 @@ class ItemParser:
                 'item_class': 'Omen',
                 'rarity': 'Currency',
                 'name': key,
-                'stack_size': count
+                'stack_size': count,
+                'display_rarity': 'Currency'  # For UI coloring
             })
 
         # Add jewel counts as separate items
         for key, count in self._jewel_counts.items():
+            rarity = self._jewel_rarities.get(key, 'Normal')
             items.append({
                 'item_class': 'Jewels',
-                'rarity': 'Normal',
+                'rarity': rarity,
                 'name': key,
-                'stack_size': count
+                'stack_size': count,
+                'display_rarity': rarity  # For UI coloring
             })
 
         # Reset state for next parse
@@ -400,4 +438,9 @@ class ItemParser:
         self._weapon_counts = {}
         self._omen_counts = {}
         self._jewel_counts = {}
+        self._ring_rarities = {}
+        self._amulet_rarities = {}
+        self._armor_rarities = {}
+        self._weapon_rarities = {}
+        self._jewel_rarities = {}
         return items
