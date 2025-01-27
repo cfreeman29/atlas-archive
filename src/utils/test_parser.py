@@ -7,6 +7,32 @@ def print_item(item):
     print(f"Stack Size: {item['stack_size']}")
     print("--------")
 
+# Test jewel data
+jewel_data = """Item Class: Jewels
+Rarity: Rare
+Luminous Stone
+Emerald
+--------
+Item Level: 82
+--------
+5% increased Flask Effect Duration
+Damage Penetrates 8% Lightning Resistance
+Herald Skills deal 21% increased Damage
+11% increased Daze Buildup
+--------
+Place into an allocated Jewel Socket on the Passive Skill Tree. Right click to remove from the Socket.
+
+Item Class: Jewels
+Rarity: Magic
+Chaotic Sapphire of Glaciers
+--------
+Item Level: 81
+--------
+9% increased Chaos Damage
+15% increased Freeze Buildup with Quarterstaves
+--------
+Place into an allocated Jewel Socket on the Passive Skill Tree. Right click to remove from the Socket."""
+
 # Test magic items
 magic_data = """Item Class: Belts
 Rarity: Magic
@@ -364,5 +390,10 @@ for item in items:
 
 print("\nTesting Omen Items:")
 items = parser.parse_items(omen_data)
+for item in items:
+    print_item(item)
+
+print("\nTesting Jewel Items:")
+items = parser.parse_items(jewel_data)
 for item in items:
     print_item(item)

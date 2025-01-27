@@ -7,6 +7,7 @@ class ItemParser:
         self._armor_counts = {}  # Store armor counts by type
         self._weapon_counts = {}  # Store weapon counts by type
         self._omen_counts = {}  # Store omen counts by type
+        self._jewel_counts = {}  # Store jewel counts by type
 
     def _extract_base_type(self, name, keywords):
         """Helper to extract base type from a magic/normal item name."""
@@ -223,6 +224,44 @@ class ItemParser:
                         else:
                             self._weapon_counts[base_type] += 1
 
+            elif current_item['item_class'] == 'Jewels':
+                # Handle jewels - extract type and count occurrences
+                if current_item['name']:
+                    base_type = None
+                    jewel_keywords = ['Sapphire', 'Emerald', 'Ruby', 'Topaz', 'Amethyst', 'Diamond']
+                    
+                    if current_item['rarity'] == 'Unique':
+                        # For unique items, use the unique name
+                        base_type = current_item['name']
+                    elif current_item['rarity'] == 'Rare':
+                        # Get the base type from the line after the name
+                        block_index = None
+                        for i, block in enumerate(blocks):
+                            for line in block:
+                                if line == current_item['name']:
+                                    block_index = i
+                                    break
+                            if block_index is not None:
+                                break
+                        
+                        if block_index is not None and len(blocks[block_index]) > blocks[block_index].index(current_item['name']) + 1:
+                            base_type = blocks[block_index][blocks[block_index].index(current_item['name']) + 1]
+                    else:
+                        # For magic/normal items, extract base type from the name
+                        name = current_item['name'].split(' of ')[0]  # Remove 'of X' suffix
+                        for keyword in jewel_keywords:
+                            if keyword in name:
+                                base_type = keyword
+                                break
+                    
+                    if base_type:
+                        # Strip any existing 'xN' from the name
+                        base_type = base_type.split(' x')[0]
+                        if base_type not in self._jewel_counts:
+                            self._jewel_counts[base_type] = 1
+                        else:
+                            self._jewel_counts[base_type] += 1
+
             elif current_item['item_class'] == 'Omen':
                 # Handle omens - count occurrences
                 if current_item['name']:
@@ -248,7 +287,7 @@ class ItemParser:
                     keywords = armor_keywords[current_item['item_class']]
                     
                     if current_item['rarity'] == 'Unique':
-                        # For unique items, use the unique name instead of base type
+                        # For unique items, use the unique name
                         base_type = current_item['name']
                     elif current_item['rarity'] == 'Rare':
                         # Get the base type from the line after the name
@@ -264,8 +303,19 @@ class ItemParser:
                         if block_index is not None and len(blocks[block_index]) > blocks[block_index].index(current_item['name']) + 1:
                             base_type = blocks[block_index][blocks[block_index].index(current_item['name']) + 1]
                     else:
-                        # For magic/normal items, extract base type from the single line name
-                        base_type = self._extract_base_type(current_item['name'], keywords)
+                        # For magic/normal items, extract base type from the name
+                        name = current_item['name'].split(' of ')[0]  # Remove 'of X' suffix
+                        # Try to find any of the keywords in the name
+                        for keyword in keywords:
+                            if keyword in name:
+                                # Get the word before the keyword if it exists
+                                name_parts = name.split()
+                                keyword_index = name_parts.index(keyword)
+                                if keyword_index > 0:
+                                    base_type = f"{name_parts[keyword_index-1]} {keyword}"
+                                else:
+                                    base_type = keyword
+                                break
                     
                     if base_type:
                         # Strip any existing 'xN' from the name
@@ -332,6 +382,15 @@ class ItemParser:
                 'stack_size': count
             })
 
+        # Add jewel counts as separate items
+        for key, count in self._jewel_counts.items():
+            items.append({
+                'item_class': 'Jewels',
+                'rarity': 'Normal',
+                'name': key,
+                'stack_size': count
+            })
+
         # Reset state for next parse
         self._items = {}
         self._waystone_counts = {}
@@ -340,4 +399,5 @@ class ItemParser:
         self._armor_counts = {}
         self._weapon_counts = {}
         self._omen_counts = {}
+        self._jewel_counts = {}
         return items
