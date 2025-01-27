@@ -5,6 +5,7 @@ class ItemParser:
         self._ring_counts = {}  # Store ring counts by type
         self._amulet_counts = {}  # Store amulet counts by type
         self._armor_counts = {}  # Store armor counts by type
+        self._weapon_counts = {}  # Store weapon counts by type
 
     def _extract_base_type(self, name, keywords):
         """Helper to extract base type from a magic/normal item name."""
@@ -158,6 +159,50 @@ class ItemParser:
                         else:
                             self._amulet_counts[base_type] += 1
 
+            elif current_item['item_class'] in ['Wands', 'Two Hand Maces', 'Bows', 'Staves', 'Quivers', 'Shields', 'Crossbows', 'Foci', 'Sceptres', 'Quarterstaves']:
+                # Handle weapons - extract base type and count occurrences
+                if current_item['name']:
+                    base_type = None
+                    weapon_keywords = {
+                        'Wands': ['Wand'],
+                        'Two Hand Maces': ['Greathammer', 'Mace'],
+                        'Bows': ['Bow'],
+                        'Staves': ['Staff'],
+                        'Quivers': ['Quiver'],
+                        'Shields': ['Shield', 'Buckler'],
+                        'Crossbows': ['Crossbow'],
+                        'Foci': ['Focus'],
+                        'Sceptres': ['Sceptre'],
+                        'Quarterstaves': ['Quarterstaff']
+                    }
+                    
+                    keywords = weapon_keywords[current_item['item_class']]
+                    
+                    if current_item['rarity'] in ['Rare', 'Unique']:
+                        # Get the base type from the line after the name
+                        block_index = None
+                        for i, block in enumerate(blocks):
+                            for line in block:
+                                if line == current_item['name']:
+                                    block_index = i
+                                    break
+                            if block_index is not None:
+                                break
+                        
+                        if block_index is not None and len(blocks[block_index]) > blocks[block_index].index(current_item['name']) + 1:
+                            base_type = blocks[block_index][blocks[block_index].index(current_item['name']) + 1]
+                    else:
+                        # For magic/normal items, extract base type from the single line name
+                        base_type = self._extract_base_type(current_item['name'], keywords)
+                    
+                    if base_type:
+                        # Strip any existing 'xN' from the name
+                        base_type = base_type.split(' x')[0]
+                        if base_type not in self._weapon_counts:
+                            self._weapon_counts[base_type] = 1
+                        else:
+                            self._weapon_counts[base_type] += 1
+
             elif current_item['item_class'] in ['Helmets', 'Body Armours', 'Gloves', 'Boots', 'Belts']:
                 # Handle armor pieces - extract base type and count occurrences
                 if current_item['name']:
@@ -236,10 +281,20 @@ class ItemParser:
                 'stack_size': count
             })
 
+        # Add weapon counts as separate items
+        for key, count in self._weapon_counts.items():
+            items.append({
+                'item_class': 'Weapons',
+                'rarity': 'Normal',
+                'name': key,
+                'stack_size': count
+            })
+
         # Reset state for next parse
         self._items = {}
         self._waystone_counts = {}
         self._ring_counts = {}
         self._amulet_counts = {}
         self._armor_counts = {}
+        self._weapon_counts = {}
         return items
