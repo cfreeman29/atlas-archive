@@ -13,7 +13,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS map_runs (
                 id INTEGER PRIMARY KEY,
                 map_name TEXT,
-                has_boss BOOLEAN,
+                boss_count INTEGER DEFAULT 0,
                 start_time TIMESTAMP,
                 duration INTEGER,
                 items TEXT,
@@ -23,12 +23,12 @@ class Database:
         ''')
         self.conn.commit()
         
-    def add_map_run(self, map_name, has_boss, start_time, duration, items, completion_status='complete'):
+    def add_map_run(self, map_name, boss_count, start_time, duration, items, completion_status='complete'):
         cursor = self.conn.cursor()
         cursor.execute('''
-            INSERT INTO map_runs (map_name, has_boss, start_time, duration, items, value, completion_status)
+            INSERT INTO map_runs (map_name, boss_count, start_time, duration, items, value, completion_status)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (map_name, has_boss, start_time, duration, json.dumps(items), 0, completion_status))
+        ''', (map_name, boss_count, start_time, duration, json.dumps(items), 0, completion_status))
         self.conn.commit()
         
     def add_items_to_map(self, map_id, items):

@@ -91,19 +91,23 @@ class ItemEntryDialog(QDialog):
     def handle_clipboard(self):
         text = self.clipboard.text()
         if text:
+            # Parse new items from clipboard
             new_items = self.item_parser.parse_items(text)
             if new_items:
-                # Add new items to existing items
-                self.items.extend(new_items)
-                # Let ItemParser handle the combining when we display
-                combined_items = self.item_parser.parse_items("\n--------\n".join(
-                    f"Item Class: {item['item_class']}\n"
-                    f"Rarity: {item['rarity']}\n"
-                    f"{item['name']}\n"
-                    f"Stack Size: {item['stack_size']}"
-                    for item in self.items
-                ))
-                self.items = combined_items
+                # Update existing items with new items
+                for new_item in new_items:
+                    name = new_item['name']
+                    found = False
+                    # Look for existing item with same name
+                    for item in self.items:
+                        if item['name'] == name:
+                            # Update stack size
+                            item['stack_size'] += new_item['stack_size']
+                            found = True
+                            break
+                    if not found:
+                        # Add new item if not found
+                        self.items.append(new_item)
                 self.update_items_display()
                 
     def update_items_display(self):

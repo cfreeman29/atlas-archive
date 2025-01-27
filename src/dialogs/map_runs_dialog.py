@@ -81,7 +81,8 @@ class MapRunsDialog(QDialog):
         
         total_duration = 0
         total_maps = len(runs)
-        total_bosses = sum(1 for run in runs if run['has_boss'])
+        total_single_bosses = sum(1 for run in runs if run['boss_count'] == 1)
+        total_twin_bosses = sum(1 for run in runs if run['boss_count'] == 2)
         total_complete = sum(1 for run in runs if run['completion_status'] == 'complete')
         total_rips = sum(1 for run in runs if run['completion_status'] == 'rip')
         
@@ -99,9 +100,15 @@ class MapRunsDialog(QDialog):
                             and not item['name'].startswith('Rarity:')])
             
             # Create list item with summary
+            boss_text = "No Boss"
+            if run['boss_count'] == 1:
+                boss_text = "Single Boss"
+            elif run['boss_count'] == 2:
+                boss_text = "Twin Boss"
+                
             item_text = (f"{run['map_name']} - {start_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
                         f"Duration: {duration_mins:02d}:{duration_secs:02d} | "
-                        f"Boss: {'Yes' if run['has_boss'] else 'No'} | "
+                        f"Boss: {boss_text} | "
                         f"Items: {item_count} | "
                         f"Status: {'Complete' if run['completion_status'] == 'complete' else 'RIP'}")
             
@@ -118,7 +125,7 @@ class MapRunsDialog(QDialog):
             f"Total Maps: {total_maps} | "
             f"Complete: {total_complete} | "
             f"RIP: {total_rips} | "
-            f"Bosses Killed: {total_bosses} | "
+            f"Single Bosses: {total_single_bosses} | Twin Bosses: {total_twin_bosses} | "
             f"Average Duration: {avg_mins:02d}:{avg_secs:02d}"
         )
             
@@ -144,7 +151,7 @@ class MapRunsDialog(QDialog):
             with open(file_name, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 # Write header
-                writer.writerow(['ID', 'Map Name', 'Has Boss', 'Start Time', 'Duration', 'Items', 'Status'])
+                writer.writerow(['ID', 'Map Name', 'Boss Count', 'Start Time', 'Duration', 'Items', 'Status'])
                 # Write data
                 for run in runs:
                     items_text = ", ".join(
@@ -160,7 +167,7 @@ class MapRunsDialog(QDialog):
                     writer.writerow([
                         run['id'],
                         run['map_name'],
-                        'Yes' if run['has_boss'] else 'No',
+                        run['boss_count'],
                         run['start_time'],
                         f"{duration_mins:02d}:{duration_secs:02d}",
                         items_text if items_text else "None",

@@ -256,17 +256,30 @@ class MapTracker(QMainWindow):
             completion_status = 'complete' if result == 1 else 'rip' if result == 2 else None
             
             if completion_status:
-                # If RIP and map has a boss, ask if they killed the boss
+                # Get boss count
+                boss_count = 0  # Default to 0 for no boss
                 has_boss = self.current_map_start['has_boss']
-                if completion_status == 'rip' and has_boss:
-                    boss_dialog = BossKillDialog(self)
-                    boss_result = boss_dialog.exec()
-                    has_boss = boss_result == 1  # Yes = 1, No = 2
+                
+                # If map has a boss and either completed or RIP with boss kill
+                if has_boss:
+                    if completion_status == 'complete':
+                        # For completed maps with boss, ask if it was twin
+                        boss_dialog = BossKillDialog(self)
+                        boss_dialog.label.setText("Was it a twin boss?")
+                        boss_dialog.yes_btn.clicked.disconnect()
+                        boss_dialog.no_btn.clicked.disconnect()
+                        boss_dialog.yes_btn.clicked.connect(lambda: boss_dialog.done(2))  # Twin boss = 2
+                        boss_dialog.no_btn.clicked.connect(lambda: boss_dialog.done(1))   # Single boss = 1
+                        boss_count = boss_dialog.exec()
+                    elif completion_status == 'rip':
+                        # For RIP, first ask if they killed boss
+                        boss_dialog = BossKillDialog(self)
+                        boss_count = boss_dialog.exec()
                 
                 duration_seconds = int(self.current_map_duration.total_seconds())
                 self.db.add_map_run(
                     self.current_map_start['map_name'],
-                    has_boss,
+                    boss_count,
                     self.current_map_start['timestamp'],
                     duration_seconds,
                     [],  # Items will be added later

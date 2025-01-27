@@ -1,74 +1,70 @@
 class ItemParser:
+    def __init__(self):
+        self._items = {}  # Store items by name
+
     def parse_items(self, text):
-        items = []
-        current_item = []
+        """Parse item text and return list of item dictionaries."""
+        # Split text into blocks using the separator
+        blocks = []
+        current_block = []
         
-        for line in text.split('\n'):
-            if line.strip() == '--------':
-                if current_item:
-                    items.append(self.process_item(current_item))
-                    current_item = []
+        for line in text.strip().split('\n'):
+            line = line.strip()
+            if not line:  # Skip empty lines
+                continue
+                
+            if line == '--------':
+                if current_block:
+                    blocks.append(current_block)
+                    current_block = []
             else:
-                current_item.append(line.strip())
-                
-        if current_item:
-            items.append(self.process_item(current_item))
-            
-        # Combine same items
-        combined_items = {}
-        for item in items:
-            if item:
-                name = item['name']
-                stack_size = self.parse_stack_size(item['stack_size'])
-                
-                if name in combined_items:
-                    combined_items[name]['stack_size'] += stack_size
-                else:
-                    combined_items[name] = {
-                        'name': name,
-                        'stack_size': stack_size,
-                        'rarity': item['rarity'],
-                        'item_class': item['item_class']
-                    }
+                current_block.append(line)
         
-        return list(combined_items.values())
+        if current_block:
+            blocks.append(current_block)
         
-    def process_item(self, lines):
-        # Basic item processing - can be expanded
-        if not lines:
-            return None
-            
-        item_data = {
-            'name': 'Unknown Item',
-            'rarity': None,
+        # Process all blocks
+        current_item = {
             'item_class': None,
+            'rarity': None,
+            'name': None,
             'stack_size': None
         }
         
-        found_rarity = False
-        for line in lines:
-            if line.startswith('Rarity:'):
-                item_data['rarity'] = line.split(': ')[1]
-                found_rarity = True
-            elif found_rarity and not line.startswith('Item Class:') and not line.startswith('Stack Size:'):
-                # The actual item name comes after the Rarity line
-                item_data['name'] = line
-                found_rarity = False  # Reset so we don't capture description text
-            elif line.startswith('Item Class:'):
-                item_data['item_class'] = line.split(': ')[1]
-            elif line.startswith('Stack Size:'):
-                item_data['stack_size'] = line.split(': ')[1]
-                
-        return item_data
-        
-    def parse_stack_size(self, stack_size):
-        """Convert stack size string to number"""
-        if not stack_size:
-            return 1
+        for block in blocks:
+            if not block:  # Skip empty blocks
+                continue
             
-        try:
-            # Extract current stack size (before the /)
-            current = stack_size.split('/')[0]
-            return int(current)
-        except (ValueError, IndexError):
-            return 1
+            # Extract item details from block
+            for i, line in enumerate(block):
+                if line.startswith('Item Class:'):
+                    current_item['item_class'] = line.split(':', 1)[1].strip()
+                    # Item name is two lines after Item Class (after Rarity line)
+                    if i + 2 < len(block):
+                        current_item['name'] = block[i + 2]
+                elif line.startswith('Rarity:'):
+                    current_item['rarity'] = line.split(':', 1)[1].strip()
+                elif line.startswith('Stack Size:'):
+                    try:
+                        amount = int(line.split(':', 1)[1].strip().split('/')[0])
+                        current_item['stack_size'] = amount
+                    except (ValueError, IndexError):
+                        continue
+            
+            # If we have both name and amount, update the totals
+            if current_item['name'] and current_item['stack_size']:
+                name = current_item['name']
+                if name in self._items:
+                    # Update existing item's stack size
+                    self._items[name]['stack_size'] += current_item['stack_size']
+                else:
+                    # Add new item
+                    self._items[name] = current_item.copy()
+                
+                # Reset stack size but keep other item details
+                current_item['stack_size'] = None
+        
+        # Get items and clear state
+        items = list(self._items.values())
+        self._items = {}  # Reset state for next parse
+        return items

@@ -35,9 +35,14 @@ class MapRunDetailsDialog(QDialog):
         info_layout.addWidget(QLabel("Duration:"), 2, 0)
         info_layout.addWidget(QLabel(f"{duration_mins:02d}:{duration_secs:02d}"), 2, 1)
         
-        # Has Boss
-        info_layout.addWidget(QLabel("Boss Killed:"), 3, 0)
-        info_layout.addWidget(QLabel("Yes" if self.run_data['has_boss'] else "No"), 3, 1)
+        # Boss Count
+        info_layout.addWidget(QLabel("Boss Status:"), 3, 0)
+        boss_text = "No Boss"
+        if self.run_data['boss_count'] == 1:
+            boss_text = "Single Boss"
+        elif self.run_data['boss_count'] == 2:
+            boss_text = "Twin Boss"
+        info_layout.addWidget(QLabel(boss_text), 3, 1)
         
         # Status
         status_text = "Complete" if self.run_data['completion_status'] == 'complete' else "RIP"
