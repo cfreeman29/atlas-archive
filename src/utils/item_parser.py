@@ -4,6 +4,27 @@ class ItemParser:
         self._waystone_counts = {}  # Store waystone counts by tier
         self._ring_counts = {}  # Store ring counts by type
         self._amulet_counts = {}  # Store amulet counts by type
+        self._armor_counts = {}  # Store armor counts by type
+
+    def _extract_base_type(self, name, keywords):
+        """Helper to extract base type from a magic/normal item name."""
+        # First split on 'of' to remove any suffixes
+        name = name.split(' of ')[0]
+        name_parts = name.split()
+        
+        for i, part in enumerate(name_parts):
+            if part in keywords and i > 0:
+                # For rings and amulets, take just the word before
+                if part in ['Ring', 'Amulet']:
+                    return f"{name_parts[i-1]} {part}"
+                
+                # For armor pieces, take the last two words (including the keyword)
+                # This handles cases like "Innovative Plate Belt" -> "Plate Belt"
+                if i > 1:
+                    return f"{name_parts[i-1]} {part}"
+                else:
+                    return f"{name_parts[i]}"
+        return None
 
     def parse_items(self, text):
         """Parse item text and return list of item dictionaries."""
@@ -119,35 +140,62 @@ class ItemParser:
                                         break
                     else:
                         # For non-rare items, process normally
-                        name_parts = current_item['name'].split()
-                        for i, part in enumerate(name_parts):
-                            if part == 'Ring' and i > 0:
-                                ring_type = name_parts[i-1]
-                                # Strip any existing 'xN' from the name
-                                ring_type = ring_type.split(' x')[0]
-                                key = f"{ring_type} Ring"
-                                if key not in self._ring_counts:
-                                    self._ring_counts[key] = 1
-                                else:
-                                    self._ring_counts[key] += 1
-                                break
+                        base_type = self._extract_base_type(current_item['name'], ['Ring'])
+                        if base_type:
+                            if base_type not in self._ring_counts:
+                                self._ring_counts[base_type] = 1
+                            else:
+                                self._ring_counts[base_type] += 1
 
             elif current_item['item_class'] == 'Amulets':
                 # Handle amulets - extract type and count occurrences
                 if current_item['name']:
                     # Find the word before "Amulet" in the name
-                    name_parts = current_item['name'].split()
-                    for i, part in enumerate(name_parts):
-                        if part == 'Amulet' and i > 0:
-                            amulet_type = name_parts[i-1]
-                            # Strip any existing 'xN' from the name
-                            amulet_type = amulet_type.split(' x')[0]
-                            key = f"{amulet_type} Amulet"
-                            if key not in self._amulet_counts:
-                                self._amulet_counts[key] = 1
-                            else:
-                                self._amulet_counts[key] += 1
-                            break
+                    base_type = self._extract_base_type(current_item['name'], ['Amulet'])
+                    if base_type:
+                        if base_type not in self._amulet_counts:
+                            self._amulet_counts[base_type] = 1
+                        else:
+                            self._amulet_counts[base_type] += 1
+
+            elif current_item['item_class'] in ['Helmets', 'Body Armours', 'Gloves', 'Boots', 'Belts']:
+                # Handle armor pieces - extract base type and count occurrences
+                if current_item['name']:
+                    base_type = None
+                    armor_keywords = {
+                        'Helmets': ['Hood', 'Helm', 'Helmet', 'Crown', 'Mask'],
+                        'Body Armours': ['Vest', 'Armour', 'Plate', 'Garb', 'Robe'],
+                        'Gloves': ['Gloves', 'Gauntlets', 'Mitts', 'Wraps'],
+                        'Boots': ['Boots', 'Greaves', 'Slippers'],
+                        'Belts': ['Belt', 'Sash', 'Stash']
+                    }
+                    
+                    keywords = armor_keywords[current_item['item_class']]
+                    
+                    if current_item['rarity'] in ['Rare', 'Unique']:
+                        # Get the base type from the line after the name
+                        block_index = None
+                        for i, block in enumerate(blocks):
+                            for line in block:
+                                if line == current_item['name']:
+                                    block_index = i
+                                    break
+                            if block_index is not None:
+                                break
+                        
+                        if block_index is not None and len(blocks[block_index]) > blocks[block_index].index(current_item['name']) + 1:
+                            base_type = blocks[block_index][blocks[block_index].index(current_item['name']) + 1]
+                    else:
+                        # For magic/normal items, extract base type from the single line name
+                        base_type = self._extract_base_type(current_item['name'], keywords)
+                    
+                    if base_type:
+                        # Strip any existing 'xN' from the name
+                        base_type = base_type.split(' x')[0]
+                        if base_type not in self._armor_counts:
+                            self._armor_counts[base_type] = 1
+                        else:
+                            self._armor_counts[base_type] += 1
         
         # Combine results from both parsing methods
         items = list(self._items.values())
@@ -179,9 +227,19 @@ class ItemParser:
                 'stack_size': count
             })
 
+        # Add armor counts as separate items
+        for key, count in self._armor_counts.items():
+            items.append({
+                'item_class': 'Armor',
+                'rarity': 'Normal',
+                'name': key,
+                'stack_size': count
+            })
+
         # Reset state for next parse
         self._items = {}
         self._waystone_counts = {}
         self._ring_counts = {}
         self._amulet_counts = {}
+        self._armor_counts = {}
         return items

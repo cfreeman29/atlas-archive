@@ -7,88 +7,121 @@ def print_item(item):
     print(f"Stack Size: {item['stack_size']}")
     print("--------")
 
-# Test stackable currency data
-currency_data = """Item Class: Stackable Currency
-Rarity: Currency
-Exalted Orb
---------
-Stack Size: 11/20
---------
-Augments a Rare item with a new random modifier
---------
-Right click this item then left click a rare item to apply it. Rare items can have up to six random modifiers.
-Shift click to unstack
-
-Item Class: Stackable Currency
-Rarity: Currency
-Exalted Orb
---------
-Stack Size: 11/20
---------
-Augments a Rare item with a new random modifier
---------
-Right click this item then left click a rare item to apply it. Rare items can have up to six random modifiers.
-Shift click to unstack"""
-
-# Test jewelry data
-jewelry_data = """Item Class: Rings
+# Test magic items
+magic_data = """Item Class: Belts
 Rarity: Magic
-Freezing Amethyst Ring of the Mongoose
+Innovative Plate Belt of Symbolism
+--------
+Charm Slots: 2 (augmented)
 --------
 Requirements:
-Level: 28
+Level: 44
+--------
+Item Level: 81
+--------
++107 to Armour (implicit)
+--------
+25% increased Charm Effect Duration
++1 Charm Slot
+
+Item Class: Rings
+Rarity: Magic
+Deliberate Sapphire Ring
+--------
+Requirements:
+Level: 20
 --------
 Item Level: 80
 --------
-+11% to Chaos Resistance (implicit)
++23% to Cold Resistance (implicit)
 --------
-Adds 9 to 17 Cold damage to Attacks
-+8 to Dexterity
++119 to Accuracy Rating"""
 
-Item Class: Amulets
-Rarity: Normal
-Amber Amulet
---------
-Requirements:
-Level: 8
---------
-Item Level: 79
---------
-+13 to Strength (implicit)
-
-Item Class: Rings
+# Test rare/unique armor data
+rare_data = """Item Class: Helmets
 Rarity: Rare
-Rift Hold
-Prismatic Ring
+Victory Star
+Expert Hunter Hood
+--------
+Quality: +20% (augmented)
+Evasion Rating: 588 (augmented)
 --------
 Requirements:
-Level: 56
+Level: 75
+Dex: 139
 --------
-Item Level: 79
+Sockets: S 
 --------
-+9% to all Elemental Resistances (implicit)
+Item Level: 77
 --------
-+92 to maximum Life
-+110 to maximum Mana
-+13 to all Attributes
-+39% to Cold Resistance
-10.8 Life Regeneration per second"""
++12% to Fire Resistance (rune)
+--------
++94 to Evasion Rating
+36% increased Evasion Rating
++35 to maximum Life
+40% increased Rarity of Items found
++23% to Cold Resistance
++36% to Lightning Resistance
+
+Item Class: Boots
+Rarity: Rare
+Storm Stride
+Advanced Embossed Boots
+--------
+Quality: +20% (augmented)
+Evasion Rating: 239 (augmented)
+--------
+Requirements:
+Level: 65
+Dex: 88
+--------
+Sockets: S 
+--------
+Item Level: 83
+--------
++7% to Chaos Resistance (rune)
+--------
+35% increased Movement Speed
++66 to Evasion Rating
++24 to maximum Life
++36% to Fire Resistance
++26% to Lightning Resistance
++36 to Stun Threshold
+
+Item Class: Boots
+Rarity: Rare
+Storm Stride
+Advanced Embossed Boots
+--------
+Quality: +20% (augmented)
+Evasion Rating: 239 (augmented)
+--------
+Requirements:
+Level: 65
+Dex: 88
+--------
+Sockets: S 
+--------
+Item Level: 83
+--------
++7% to Chaos Resistance (rune)
+--------
+35% increased Movement Speed
++66 to Evasion Rating
++24 to maximum Life
++36% to Fire Resistance
++26% to Lightning Resistance
++36 to Stun Threshold"""
 
 # Create parser and test
 parser = ItemParser()
 
-print("Testing Stackable Currency:")
-items = parser.parse_items(currency_data)
+print("Testing Magic Items:")
+items = parser.parse_items(magic_data)
 for item in items:
     print_item(item)
 
-print("\nTesting Jewelry:")
-items = parser.parse_items(jewelry_data)
-for item in items:
-    print_item(item)
-
-# Test parsing same data again (should NOT double count since parser state is reset)
-print("\nSecond parse of Jewelry (should be same as first):")
-items = parser.parse_items(jewelry_data)
+print("\nTesting Rare Items:")
+items = parser.parse_items(rare_data)
 for item in items:
     print_item(item)
