@@ -7,6 +7,18 @@ def print_item(item):
     print(f"Stack Size: {item['stack_size']}")
     print("--------")
 
+# Test relic data
+relic_data = """Item Class: Relics
+Rarity: Magic
+Enduring Urn Relic of Worth
+--------
+Item Level: 69
+--------
+12% increased maximum Life
++10% to Honour Resistance
+--------
+Place this item on the Relic Altar at the start of the Trial of the Sekhemas"""
+
 # Test jewel data
 jewel_data = """Item Class: Jewels
 Rarity: Rare
@@ -395,5 +407,10 @@ for item in items:
 
 print("\nTesting Jewel Items:")
 items = parser.parse_items(jewel_data)
+for item in items:
+    print_item(item)
+
+print("\nTesting Relic Items:")
+items = parser.parse_items(relic_data)
 for item in items:
     print_item(item)

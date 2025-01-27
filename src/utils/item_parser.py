@@ -8,6 +8,7 @@ class ItemParser:
         self._weapon_counts = {}  # Store weapon counts by type
         self._omen_counts = {}  # Store omen counts by type
         self._jewel_counts = {}  # Store jewel counts by type
+        self._relic_counts = {}  # Store relic counts by type
         
         # Store rarity information for each item type
         self._ring_rarities = {}
@@ -15,6 +16,7 @@ class ItemParser:
         self._armor_rarities = {}
         self._weapon_rarities = {}
         self._jewel_rarities = {}
+        self._relic_rarities = {}
 
     def _extract_base_type(self, name, keywords):
         """Helper to extract base type from a magic/normal item name."""
@@ -286,6 +288,27 @@ class ItemParser:
                         else:
                             self._jewel_counts[key] += 1
 
+            elif current_item['item_class'] == 'Relics':
+                # Handle relics - extract type and count occurrences
+                if current_item['name']:
+                    base_type = None
+                    if current_item['rarity'] == 'Magic':
+                        # For magic items, extract base type from the name
+                        base_type = self._extract_base_type(current_item['name'], ['Relic'])
+                    else:
+                        # For other rarities, use full name
+                        base_type = current_item['name']
+                    
+                    if base_type:
+                        # Strip any existing 'xN' from the name
+                        base_type = base_type.split(' x')[0]
+                        key = f"{base_type}_{current_item['rarity']}"
+                        if key not in self._relic_counts:
+                            self._relic_counts[key] = 1
+                            self._relic_rarities[key] = current_item['rarity']
+                        else:
+                            self._relic_counts[key] += 1
+
             elif current_item['item_class'] == 'Omen':
                 # Handle omens - count occurrences
                 if current_item['name']:
@@ -429,6 +452,17 @@ class ItemParser:
                 'display_rarity': rarity  # For UI coloring
             })
 
+        # Add relic counts as separate items
+        for key, count in self._relic_counts.items():
+            rarity = self._relic_rarities.get(key, 'Normal')
+            items.append({
+                'item_class': 'Relics',
+                'rarity': rarity,
+                'name': key,
+                'stack_size': count,
+                'display_rarity': rarity  # For UI coloring
+            })
+
         # Reset state for next parse
         self._items = {}
         self._waystone_counts = {}
@@ -443,4 +477,6 @@ class ItemParser:
         self._armor_rarities = {}
         self._weapon_rarities = {}
         self._jewel_rarities = {}
+        self._relic_counts = {}
+        self._relic_rarities = {}
         return items
