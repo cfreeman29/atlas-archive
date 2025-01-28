@@ -3,13 +3,14 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLa
                            QGridLayout, QWidget, QScrollArea)
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
+from src.utils.resource_path import get_resource_path
 
 class MechanicIcon(QLabel):
     def __init__(self, base_path, active=False, parent=None):
         super().__init__(parent)
         # Store paths for both states
-        self.active_pixmap = QPixmap(base_path)
-        self.inactive_pixmap = QPixmap(base_path.replace('.png', '_off.png'))
+        self.active_pixmap = QPixmap(get_resource_path(base_path))
+        self.inactive_pixmap = QPixmap(get_resource_path(base_path.replace('.png', '_off.png')))
         self.setFixedSize(32, 32)  # Set fixed size for the icons
         self.active = active
         self.update_pixmap()

@@ -11,6 +11,7 @@ from PyQt6.QtGui import QPixmap, QCursor
 from src.utils.database import Database
 from src.utils.log_parser import LogParser
 from src.utils.item_parser import ItemParser
+from src.utils.resource_path import get_resource_path
 from src.dialogs.boss_kill_dialog import BossKillDialog
 from src.dialogs.map_completion_dialog import MapCompletionDialog
 from src.dialogs.map_runs_dialog import MapRunsDialog
@@ -21,8 +22,8 @@ class ClickableLabel(QLabel):
         super().__init__(parent)
         self.active = False
         # Store paths for both states
-        self.active_pixmap = QPixmap(base_path)
-        self.inactive_pixmap = QPixmap(base_path.replace('.png', '_off.png'))
+        self.active_pixmap = QPixmap(get_resource_path(base_path))
+        self.inactive_pixmap = QPixmap(get_resource_path(base_path.replace('.png', '_off.png')))
         self.setFixedSize(48, 48)  # Set fixed size for the icons
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))  # Change cursor on hover
         self.update_pixmap()
