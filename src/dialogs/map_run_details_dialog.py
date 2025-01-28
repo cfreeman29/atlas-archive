@@ -54,6 +54,48 @@ class MapRunDetailsDialog(QDialog):
         
         layout.addWidget(info_widget)
         
+        # Mechanics Section
+        mechanics_label = QLabel("Map Mechanics")
+        mechanics_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff;")
+        layout.addWidget(mechanics_label)
+        
+        mechanics_widget = QWidget()
+        mechanics_layout = QGridLayout(mechanics_widget)
+        mechanics_layout.setSpacing(10)
+        
+        # Add mechanics info
+        row = 0
+        if self.run_data.get('has_breach'):
+            mechanics_layout.addWidget(QLabel("Breach:"), row, 0)
+            breach_text = f"Yes (Count: {self.run_data.get('breach_count', 0)})"
+            mechanics_layout.addWidget(QLabel(breach_text), row, 1)
+            row += 1
+            
+        if self.run_data.get('has_delirium'):
+            mechanics_layout.addWidget(QLabel("Delirium:"), row, 0)
+            mechanics_layout.addWidget(QLabel("Yes"), row, 1)
+            row += 1
+            
+        if self.run_data.get('has_expedition'):
+            mechanics_layout.addWidget(QLabel("Expedition:"), row, 0)
+            mechanics_layout.addWidget(QLabel("Yes"), row, 1)
+            row += 1
+            
+        if self.run_data.get('has_ritual'):
+            mechanics_layout.addWidget(QLabel("Ritual:"), row, 0)
+            mechanics_layout.addWidget(QLabel("Yes"), row, 1)
+            row += 1
+            
+        if row == 0:
+            mechanics_layout.addWidget(QLabel("No mechanics present"), 0, 0, 1, 2)
+            
+        mechanics_widget.setStyleSheet("""
+            QLabel {
+                color: #ffffff;
+            }
+        """)
+        layout.addWidget(mechanics_widget)
+        
         # Items Section
         items_label = QLabel("Loot")
         items_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff;")

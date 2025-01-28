@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                            QHBoxLayout, QPushButton, QLabel, QDialog, QFileDialog,
-                           QDialogButtonBox)
+                           QDialogButtonBox, QCheckBox, QSpinBox)
 from PyQt6.QtCore import Qt, QTimer
 
 from src.utils import Database, LogParser, ItemParser
@@ -61,6 +61,13 @@ class MapTracker(QMainWindow):
             QPushButton[monitoring="true"]:hover {
                 background-color: #008000;
             }
+            QPushButton.counter-btn {
+                min-width: 25px;
+                min-height: 25px;
+                padding: 0px;
+                font-size: 16px;
+                font-weight: bold;
+            }
             QLabel {
                 color: #ffffff;
                 font-size: 14px;
@@ -73,6 +80,36 @@ class MapTracker(QMainWindow):
             QLabel#timer {
                 font-size: 20px;
                 color: #ffffff;
+            }
+            QCheckBox {
+                color: #ffffff;
+                spacing: 5px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border: 2px solid #3d3d3d;
+                border-radius: 3px;
+                background-color: #2d2d2d;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #006400;
+                border-color: #008000;
+            }
+            QCheckBox::indicator:hover {
+                border-color: #4d4d4d;
+            }
+            QSpinBox {
+                background-color: #2d2d2d;
+                color: #ffffff;
+                border: 1px solid #3d3d3d;
+                border-radius: 3px;
+                padding: 2px;
+                width: 40px;
+            }
+            QSpinBox:disabled {
+                color: #666666;
+                border-color: #2d2d2d;
             }
         """)
     
@@ -140,9 +177,73 @@ class MapTracker(QMainWindow):
         
         map_buttons_layout.addStretch()
         map_layout.addLayout(map_buttons_layout)
-        
         layout.addLayout(map_layout)
+        
+        # Add stretch to push mechanics to bottom
         layout.addStretch()
+        
+        # Mechanics section at bottom
+        mechanics_layout = QHBoxLayout()
+        mechanics_layout.setSpacing(20)
+        
+        # Breach section with counter
+        breach_section = QHBoxLayout()
+        self.breach_cb = QCheckBox("Breach")
+        self.breach_cb.hide()
+        self.breach_cb.stateChanged.connect(self.on_breach_toggled)
+        breach_section.addWidget(self.breach_cb)
+        
+        breach_counter = QHBoxLayout()
+        self.breach_minus_btn = QPushButton("-")
+        self.breach_minus_btn.setProperty("class", "counter-btn")
+        self.breach_minus_btn.clicked.connect(lambda: self.adjust_breach_count(-1))
+        self.breach_minus_btn.hide()
+        
+        self.breach_count_spin = QSpinBox()
+        self.breach_count_spin.setRange(0, 10)
+        self.breach_count_spin.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
+        self.breach_count_spin.hide()
+        self.breach_count_spin.setEnabled(False)
+        
+        self.breach_plus_btn = QPushButton("+")
+        self.breach_plus_btn.setProperty("class", "counter-btn")
+        self.breach_plus_btn.clicked.connect(lambda: self.adjust_breach_count(1))
+        self.breach_plus_btn.hide()
+        
+        breach_counter.addWidget(self.breach_minus_btn)
+        breach_counter.addWidget(self.breach_count_spin)
+        breach_counter.addWidget(self.breach_plus_btn)
+        breach_section.addLayout(breach_counter)
+        mechanics_layout.addLayout(breach_section)
+        
+        # Other mechanics
+        self.delirium_cb = QCheckBox("Delirium")
+        self.delirium_cb.hide()
+        mechanics_layout.addWidget(self.delirium_cb)
+        
+        self.expedition_cb = QCheckBox("Expedition")
+        self.expedition_cb.hide()
+        mechanics_layout.addWidget(self.expedition_cb)
+        
+        self.ritual_cb = QCheckBox("Ritual")
+        self.ritual_cb.hide()
+        mechanics_layout.addWidget(self.ritual_cb)
+        
+        mechanics_layout.addStretch()
+        layout.addLayout(mechanics_layout)
+
+    def on_breach_toggled(self, checked):
+        """Enable/disable breach counter based on checkbox state"""
+        self.breach_count_spin.setEnabled(checked)
+        self.breach_minus_btn.setEnabled(checked)
+        self.breach_plus_btn.setEnabled(checked)
+        if not checked:
+            self.breach_count_spin.setValue(0)
+
+    def adjust_breach_count(self, delta):
+        """Adjust breach count by delta amount"""
+        current = self.breach_count_spin.value()
+        self.breach_count_spin.setValue(max(0, min(10, current + delta)))
 
     def show_runs_dialog(self):
         dialog = MapRunsDialog(self.db, self)
@@ -216,6 +317,22 @@ class MapTracker(QMainWindow):
             self.current_map_duration = timedelta()
             self.map_name_label.setText(f"In map: {event['map_name']}")
             
+            # Reset mechanic selections for new map
+            self.breach_cb.setChecked(False)
+            self.delirium_cb.setChecked(False)
+            self.expedition_cb.setChecked(False)
+            self.ritual_cb.setChecked(False)
+            self.breach_count_spin.setValue(0)
+            
+        # Show mechanic controls
+        self.breach_cb.show()
+        self.breach_count_spin.show()
+        self.breach_minus_btn.show()
+        self.breach_plus_btn.show()
+        self.delirium_cb.show()
+        self.expedition_cb.show()
+        self.ritual_cb.show()
+            
         # Reset UI state for map start
         self.timer_label.show()
         self.log_items_btn.hide()
@@ -283,7 +400,12 @@ class MapTracker(QMainWindow):
                     self.current_map_start['timestamp'],
                     duration_seconds,
                     [],  # Items will be added later
-                    completion_status
+                    completion_status,
+                    self.breach_cb.isChecked(),
+                    self.delirium_cb.isChecked(),
+                    self.expedition_cb.isChecked(),
+                    self.ritual_cb.isChecked(),
+                    self.breach_count_spin.value()
                 )
                 self.current_map_start = None
                 self.current_map_seed = None
@@ -292,6 +414,15 @@ class MapTracker(QMainWindow):
                 self.map_name_label.setText(f"Map {status_text}")
                 self.end_map_btn.hide()
                 self.log_items_btn.show()
+                
+                # Hide mechanic controls
+                self.breach_cb.hide()
+                self.breach_count_spin.hide()
+                self.breach_minus_btn.hide()
+                self.breach_plus_btn.hide()
+                self.delirium_cb.hide()
+                self.expedition_cb.hide()
+                self.ritual_cb.hide()
 
     def update_map_timer(self):
         if self.current_map_start:

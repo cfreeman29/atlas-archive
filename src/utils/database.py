@@ -18,17 +18,27 @@ class Database:
                 duration INTEGER,
                 items TEXT,
                 value REAL,
-                completion_status TEXT DEFAULT 'complete'
+                completion_status TEXT DEFAULT 'complete',
+                has_breach BOOLEAN DEFAULT 0,
+                has_delirium BOOLEAN DEFAULT 0,
+                has_expedition BOOLEAN DEFAULT 0,
+                has_ritual BOOLEAN DEFAULT 0,
+                breach_count INTEGER DEFAULT 0
             )
         ''')
         self.conn.commit()
         
-    def add_map_run(self, map_name, boss_count, start_time, duration, items, completion_status='complete'):
+    def add_map_run(self, map_name, boss_count, start_time, duration, items, completion_status='complete',
+                    has_breach=False, has_delirium=False, has_expedition=False, has_ritual=False, breach_count=0):
         cursor = self.conn.cursor()
         cursor.execute('''
-            INSERT INTO map_runs (map_name, boss_count, start_time, duration, items, value, completion_status)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (map_name, boss_count, start_time, duration, json.dumps(items), 0, completion_status))
+            INSERT INTO map_runs (
+                map_name, boss_count, start_time, duration, items, value, completion_status,
+                has_breach, has_delirium, has_expedition, has_ritual, breach_count
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (map_name, boss_count, start_time, duration, json.dumps(items), 0, completion_status,
+              has_breach, has_delirium, has_expedition, has_ritual, breach_count))
         self.conn.commit()
         
     def add_items_to_map(self, map_id, items):
