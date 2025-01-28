@@ -92,7 +92,6 @@ python main.py
    - Select completion status (Complete/RIP)
    - For maps with bosses:
      - On completion: Select if it was a twin boss
-     - On RIP: Select if boss was killed
 6. After a map:
    - Use "Log Items" to record items from your clipboard
    - View run history with the "View Runs" button
