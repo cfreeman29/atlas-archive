@@ -55,7 +55,7 @@ class ClickableLabel(QLabel):
 class MapTracker(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PoE2 Map Tracker")
+        self.setWindowTitle("Atlas Archive")
         self.setMinimumSize(800, 400)
         
         # Initialize components
