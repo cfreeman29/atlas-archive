@@ -2,6 +2,8 @@
 
 A PyQt6-based application for tracking Path of Exile 2 map runs, including time spent, boss kills, loot obtained, and endgame mechanics.
 
+![Main Application Window](ref_images/main_window.png)
+
 ## Project Structure
 
 ```
@@ -90,6 +92,9 @@ python main.py
    - Track mechanics by clicking their icons at the bottom
    - For Breach encounters, use +/- buttons to track count
    - Map timer automatically pauses when entering hideout
+
+![Single Map Run Dialog](ref_images/single_map_run_dialog.png)
+
 5. End a map run:
    - Automatically ends when entering a new map/area
    - Can manually end using "End Map" button when paused
@@ -98,7 +103,12 @@ python main.py
      - On completion: Select if it was a twin boss
 6. After a map:
    - Use "Log Items" to record items from your clipboard
+
+![Item Entry Dialog](ref_images/item_entry.png)
+
    - View run history with the "View Runs" button
+
+![Map Run History](ref_images/map_run_history.png)
 
 ## Database Schema
 
