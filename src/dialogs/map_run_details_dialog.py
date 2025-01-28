@@ -1,6 +1,29 @@
 from datetime import datetime
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
                            QGridLayout, QWidget, QScrollArea)
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import Qt
+
+class MechanicIcon(QLabel):
+    def __init__(self, base_path, active=False, parent=None):
+        super().__init__(parent)
+        # Store paths for both states
+        self.active_pixmap = QPixmap(base_path)
+        self.inactive_pixmap = QPixmap(base_path.replace('.png', '_off.png'))
+        self.setFixedSize(32, 32)  # Set fixed size for the icons
+        self.active = active
+        self.update_pixmap()
+        
+    def update_pixmap(self):
+        # Use the appropriate pixmap based on state
+        pixmap = self.active_pixmap if self.active else self.inactive_pixmap
+        # Scale the pixmap
+        scaled_pixmap = pixmap.scaled(
+            self.size(),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+        self.setPixmap(scaled_pixmap)
 
 class MapRunDetailsDialog(QDialog):
     def __init__(self, run_data, parent=None):
@@ -60,40 +83,31 @@ class MapRunDetailsDialog(QDialog):
         layout.addWidget(mechanics_label)
         
         mechanics_widget = QWidget()
-        mechanics_layout = QGridLayout(mechanics_widget)
-        mechanics_layout.setSpacing(10)
+        mechanics_layout = QHBoxLayout(mechanics_widget)
+        mechanics_layout.setSpacing(20)
         
-        # Add mechanics info
-        row = 0
+        # Add mechanics icons
+        # Breach with counter
+        breach_section = QHBoxLayout()
+        breach_icon = MechanicIcon("src/images/endgame-mech/breach.png", self.run_data.get('has_breach', False))
+        breach_section.addWidget(breach_icon)
         if self.run_data.get('has_breach'):
-            mechanics_layout.addWidget(QLabel("Breach:"), row, 0)
-            breach_text = f"Yes (Count: {self.run_data.get('breach_count', 0)})"
-            mechanics_layout.addWidget(QLabel(breach_text), row, 1)
-            row += 1
-            
-        if self.run_data.get('has_delirium'):
-            mechanics_layout.addWidget(QLabel("Delirium:"), row, 0)
-            mechanics_layout.addWidget(QLabel("Yes"), row, 1)
-            row += 1
-            
-        if self.run_data.get('has_expedition'):
-            mechanics_layout.addWidget(QLabel("Expedition:"), row, 0)
-            mechanics_layout.addWidget(QLabel("Yes"), row, 1)
-            row += 1
-            
-        if self.run_data.get('has_ritual'):
-            mechanics_layout.addWidget(QLabel("Ritual:"), row, 0)
-            mechanics_layout.addWidget(QLabel("Yes"), row, 1)
-            row += 1
-            
-        if row == 0:
-            mechanics_layout.addWidget(QLabel("No mechanics present"), 0, 0, 1, 2)
-            
-        mechanics_widget.setStyleSheet("""
-            QLabel {
-                color: #ffffff;
-            }
-        """)
+            breach_count = QLabel(f"x{self.run_data.get('breach_count', 0)}")
+            breach_count.setStyleSheet("color: #ffffff; font-size: 14px;")
+            breach_section.addWidget(breach_count)
+        mechanics_layout.addLayout(breach_section)
+        
+        # Other mechanics
+        delirium_icon = MechanicIcon("src/images/endgame-mech/delirium.png", self.run_data.get('has_delirium', False))
+        mechanics_layout.addWidget(delirium_icon)
+        
+        expedition_icon = MechanicIcon("src/images/endgame-mech/expedition.png", self.run_data.get('has_expedition', False))
+        mechanics_layout.addWidget(expedition_icon)
+        
+        ritual_icon = MechanicIcon("src/images/endgame-mech/ritual.png", self.run_data.get('has_ritual', False))
+        mechanics_layout.addWidget(ritual_icon)
+        
+        mechanics_layout.addStretch()
         layout.addWidget(mechanics_widget)
         
         # Items Section
