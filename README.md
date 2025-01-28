@@ -77,6 +77,10 @@ Download the latest release from the releases folder and run the executable dire
 
 1. Run the application:
 ```bash
+Atlas Archive.exe 
+```
+OR
+```bash
 python main.py
 ```
 
