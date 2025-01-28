@@ -4,12 +4,52 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                            QHBoxLayout, QPushButton, QLabel, QDialog, QFileDialog,
-                           QDialogButtonBox, QCheckBox, QSpinBox)
+                           QDialogButtonBox, QSpinBox)
 from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QPixmap, QCursor
 
-from src.utils import Database, LogParser, ItemParser
-from src.dialogs import (BossKillDialog, MapCompletionDialog, MapRunsDialog, 
-                        ItemEntryDialog)
+from src.utils.database import Database
+from src.utils.log_parser import LogParser
+from src.utils.item_parser import ItemParser
+from src.dialogs.boss_kill_dialog import BossKillDialog
+from src.dialogs.map_completion_dialog import MapCompletionDialog
+from src.dialogs.map_runs_dialog import MapRunsDialog
+from src.dialogs.item_entry_dialog import ItemEntryDialog
+
+class ClickableLabel(QLabel):
+    def __init__(self, base_path, parent=None):
+        super().__init__(parent)
+        self.active = False
+        # Store paths for both states
+        self.active_pixmap = QPixmap(base_path)
+        self.inactive_pixmap = QPixmap(base_path.replace('.png', '_off.png'))
+        self.setFixedSize(48, 48)  # Set fixed size for the icons
+        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))  # Change cursor on hover
+        self.update_pixmap()
+        
+    def update_pixmap(self):
+        # Use the appropriate pixmap based on state
+        pixmap = self.active_pixmap if self.active else self.inactive_pixmap
+        # Scale the pixmap
+        scaled_pixmap = pixmap.scaled(
+            self.size(),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+        self.setPixmap(scaled_pixmap)
+    
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.active = not self.active
+            self.update_pixmap()
+            
+    def is_active(self):
+        return self.active
+    
+    def set_active(self, active):
+        if self.active != active:
+            self.active = active
+            self.update_pixmap()
 
 class MapTracker(QMainWindow):
     def __init__(self):
@@ -80,24 +120,6 @@ class MapTracker(QMainWindow):
             QLabel#timer {
                 font-size: 20px;
                 color: #ffffff;
-            }
-            QCheckBox {
-                color: #ffffff;
-                spacing: 5px;
-            }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-                border: 2px solid #3d3d3d;
-                border-radius: 3px;
-                background-color: #2d2d2d;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #006400;
-                border-color: #008000;
-            }
-            QCheckBox::indicator:hover {
-                border-color: #4d4d4d;
             }
             QSpinBox {
                 background-color: #2d2d2d;
@@ -188,10 +210,9 @@ class MapTracker(QMainWindow):
         
         # Breach section with counter
         breach_section = QHBoxLayout()
-        self.breach_cb = QCheckBox("Breach")
-        self.breach_cb.hide()
-        self.breach_cb.stateChanged.connect(self.on_breach_toggled)
-        breach_section.addWidget(self.breach_cb)
+        self.breach_icon = ClickableLabel("src/images/endgame-mech/breach.png")
+        self.breach_icon.hide()
+        breach_section.addWidget(self.breach_icon)
         
         breach_counter = QHBoxLayout()
         self.breach_minus_btn = QPushButton("-")
@@ -217,28 +238,33 @@ class MapTracker(QMainWindow):
         mechanics_layout.addLayout(breach_section)
         
         # Other mechanics
-        self.delirium_cb = QCheckBox("Delirium")
-        self.delirium_cb.hide()
-        mechanics_layout.addWidget(self.delirium_cb)
+        self.delirium_icon = ClickableLabel("src/images/endgame-mech/delirium.png")
+        self.delirium_icon.hide()
+        mechanics_layout.addWidget(self.delirium_icon)
         
-        self.expedition_cb = QCheckBox("Expedition")
-        self.expedition_cb.hide()
-        mechanics_layout.addWidget(self.expedition_cb)
+        self.expedition_icon = ClickableLabel("src/images/endgame-mech/expedition.png")
+        self.expedition_icon.hide()
+        mechanics_layout.addWidget(self.expedition_icon)
         
-        self.ritual_cb = QCheckBox("Ritual")
-        self.ritual_cb.hide()
-        mechanics_layout.addWidget(self.ritual_cb)
+        self.ritual_icon = ClickableLabel("src/images/endgame-mech/ritual.png")
+        self.ritual_icon.hide()
+        mechanics_layout.addWidget(self.ritual_icon)
         
         mechanics_layout.addStretch()
         layout.addLayout(mechanics_layout)
 
-    def on_breach_toggled(self, checked):
-        """Enable/disable breach counter based on checkbox state"""
-        self.breach_count_spin.setEnabled(checked)
-        self.breach_minus_btn.setEnabled(checked)
-        self.breach_plus_btn.setEnabled(checked)
-        if not checked:
-            self.breach_count_spin.setValue(0)
+        # Connect breach icon click to counter toggle
+        self.breach_icon.mousePressEvent = self.on_breach_icon_click
+
+    def on_breach_icon_click(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.breach_icon.active = not self.breach_icon.active
+            self.breach_icon.update_pixmap()
+            self.breach_count_spin.setEnabled(self.breach_icon.active)
+            self.breach_minus_btn.setEnabled(self.breach_icon.active)
+            self.breach_plus_btn.setEnabled(self.breach_icon.active)
+            if not self.breach_icon.active:
+                self.breach_count_spin.setValue(0)
 
     def adjust_breach_count(self, delta):
         """Adjust breach count by delta amount"""
@@ -318,20 +344,20 @@ class MapTracker(QMainWindow):
             self.map_name_label.setText(f"In map: {event['map_name']}")
             
             # Reset mechanic selections for new map
-            self.breach_cb.setChecked(False)
-            self.delirium_cb.setChecked(False)
-            self.expedition_cb.setChecked(False)
-            self.ritual_cb.setChecked(False)
+            self.breach_icon.set_active(False)
+            self.delirium_icon.set_active(False)
+            self.expedition_icon.set_active(False)
+            self.ritual_icon.set_active(False)
             self.breach_count_spin.setValue(0)
             
         # Show mechanic controls
-        self.breach_cb.show()
+        self.breach_icon.show()
         self.breach_count_spin.show()
         self.breach_minus_btn.show()
         self.breach_plus_btn.show()
-        self.delirium_cb.show()
-        self.expedition_cb.show()
-        self.ritual_cb.show()
+        self.delirium_icon.show()
+        self.expedition_icon.show()
+        self.ritual_icon.show()
             
         # Reset UI state for map start
         self.timer_label.show()
@@ -401,10 +427,10 @@ class MapTracker(QMainWindow):
                     duration_seconds,
                     [],  # Items will be added later
                     completion_status,
-                    self.breach_cb.isChecked(),
-                    self.delirium_cb.isChecked(),
-                    self.expedition_cb.isChecked(),
-                    self.ritual_cb.isChecked(),
+                    self.breach_icon.is_active(),
+                    self.delirium_icon.is_active(),
+                    self.expedition_icon.is_active(),
+                    self.ritual_icon.is_active(),
                     self.breach_count_spin.value()
                 )
                 self.current_map_start = None
@@ -416,13 +442,13 @@ class MapTracker(QMainWindow):
                 self.log_items_btn.show()
                 
                 # Hide mechanic controls
-                self.breach_cb.hide()
+                self.breach_icon.hide()
                 self.breach_count_spin.hide()
                 self.breach_minus_btn.hide()
                 self.breach_plus_btn.hide()
-                self.delirium_cb.hide()
-                self.expedition_cb.hide()
-                self.ritual_cb.hide()
+                self.delirium_icon.hide()
+                self.expedition_icon.hide()
+                self.ritual_icon.hide()
 
     def update_map_timer(self):
         if self.current_map_start:
