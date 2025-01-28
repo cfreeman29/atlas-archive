@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                            QHBoxLayout, QPushButton, QLabel, QDialog, QFileDialog,
                            QDialogButtonBox, QSpinBox)
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPixmap, QCursor
+from PyQt6.QtGui import QPixmap, QCursor, QIcon
 
 from src.utils.database import Database
 from src.utils.log_parser import LogParser
@@ -469,6 +469,8 @@ class MapTracker(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon(get_resource_path("src/images/app/icon.png")))
     window = MapTracker()
+    window.setWindowIcon(QIcon(get_resource_path("src/images/app/icon.png")))
     window.show()
     sys.exit(app.exec())
