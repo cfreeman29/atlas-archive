@@ -92,9 +92,6 @@ python main.py
    - Track mechanics by clicking their icons at the bottom
    - For Breach encounters, use +/- buttons to track count
    - Map timer automatically pauses when entering hideout
-
-![Single Map Run Dialog](ref_images/single_map_run_dialog.png)
-
 5. End a map run:
    - Automatically ends when entering a new map/area
    - Can manually end using "End Map" button when paused
@@ -109,6 +106,7 @@ python main.py
    - View run history with the "View Runs" button
 
 ![Map Run History](ref_images/map_run_history.png)
+![Single Map Run Dialog](ref_images/single_map_run_dialog.png)
 
 ## Database Schema
 
