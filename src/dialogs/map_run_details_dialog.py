@@ -159,7 +159,7 @@ class MapRunDetailsDialog(QDialog):
                     # Get rarity from name suffix if available, otherwise fallback to display_rarity
                     rarity = name_parts[1] if len(name_parts) > 1 else item.get('display_rarity', 'Normal')
                     
-                    # Color mapping based on rarity
+                    # Color mapping based on rarity and special suffixes
                     rarity_colors = {
                         'Normal': '#ffffff',  # White
                         'Magic': '#8888ff',   # Blue
@@ -168,7 +168,11 @@ class MapRunDetailsDialog(QDialog):
                         'Currency': '#aa9e82'  # Currency color
                     }
                     
-                    color = rarity_colors.get(rarity, '#cccccc')
+                    # Check for _pinkey suffix to color red
+                    if name.endswith('_pinkey'):
+                        color = '#ff0000'  # Red for pinnacle keys
+                    else:
+                        color = rarity_colors.get(rarity, '#cccccc')
                     item_text = f"{display_name} x{item['stack_size']}"
                     item_label = QLabel(item_text)
                     item_label.setStyleSheet(f"color: {color};")

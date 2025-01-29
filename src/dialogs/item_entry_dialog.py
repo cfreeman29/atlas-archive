@@ -145,7 +145,7 @@ class ItemEntryDialog(QDialog):
                 display_name = name_parts[0]
                 rarity = item.get('display_rarity', 'Normal')
                 
-                # Color mapping based on rarity
+                # Color mapping based on rarity and special suffixes
                 rarity_colors = {
                     'Normal': '#ffffff',  # White
                     'Magic': '#8888ff',   # Blue
@@ -154,7 +154,11 @@ class ItemEntryDialog(QDialog):
                     'Currency': '#aa9e82'  # Currency color
                 }
                 
-                color = rarity_colors.get(rarity, '#cccccc')
+                # Check for _pinkey suffix to color red
+                if name.endswith('_pinkey'):
+                    color = '#ff0000'  # Red for pinnacle keys
+                else:
+                    color = rarity_colors.get(rarity, '#cccccc')
                 item_label = QLabel(f"{display_name} x{quantity}")
                 item_label.setStyleSheet(f"color: {color};")
                 self.items_layout.addWidget(item_label)
