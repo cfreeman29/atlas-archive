@@ -9,6 +9,7 @@ class ItemParser:
         self._omen_counts = {}  # Store omen counts by type
         self._jewel_counts = {}  # Store jewel counts by type
         self._relic_counts = {}  # Store relic counts by type
+        self._tablet_counts = {}  # Store tablet counts by type
         
         # Store rarity information for each item type
         self._ring_rarities = {}
@@ -17,6 +18,8 @@ class ItemParser:
         self._weapon_rarities = {}
         self._jewel_rarities = {}
         self._relic_rarities = {}
+        self._tablet_rarities = {}
+        self._pinnacle_key_counts = {}  # Store pinnacle key counts by type
 
     def _extract_base_type(self, name, keywords):
         """Helper to extract base type from a magic/normal item name."""
@@ -309,6 +312,58 @@ class ItemParser:
                         else:
                             self._relic_counts[key] += 1
 
+            elif current_item['item_class'] == 'Pinnacle Keys':
+                # Handle pinnacle keys - count occurrences and mark for red display
+                if current_item['name']:
+                    # Strip any existing 'xN' from the name
+                    name = current_item['name'].split(' x')[0]
+                    key = f"{name}_pinkey"  # Add _pinkey suffix for red display
+                    if key not in self._pinnacle_key_counts:
+                        self._pinnacle_key_counts[key] = 1
+                    else:
+                        self._pinnacle_key_counts[key] += 1
+
+            elif current_item['item_class'] == 'Tablet':
+                # Handle tablets - extract type and count occurrences
+                if current_item['name']:
+                    base_type = None
+                    tablet_types = [
+                        'Breach Precursor Tablet',
+                        'Expedition Precursor Tablet',
+                        'Delirium Precursor Tablet',
+                        'Ritual Precursor Tablet',
+                        'Precursor Tablet',
+                        'Overseer Precursor Tablet'
+                    ]
+                    
+                    if current_item['rarity'] == 'Magic':
+                        # For magic items, extract the base tablet type
+                        name = current_item['name'].split(' of ')[0]  # Remove 'of X' suffix
+                        # Find which tablet type this is by looking for "Precursor Tablet"
+                        if 'Precursor Tablet' in name:
+                            # Check if it's a special type
+                            for tablet_type in tablet_types:
+                                if tablet_type != 'Precursor Tablet' and all(word in name for word in tablet_type.split()):
+                                    base_type = tablet_type
+                                    break
+                            # If no special type found, use base Precursor Tablet
+                            if not base_type:
+                                base_type = 'Precursor Tablet'
+                    else:
+                        # For normal items, use the exact name if it matches a known type
+                        if current_item['name'] in tablet_types:
+                            base_type = current_item['name']
+                    
+                    if base_type:
+                        # Strip any existing 'xN' from the name
+                        base_type = base_type.split(' x')[0]
+                        key = f"{base_type}_{current_item['rarity']}"
+                        if key not in self._tablet_counts:
+                            self._tablet_counts[key] = 1
+                            self._tablet_rarities[key] = current_item['rarity']
+                        else:
+                            self._tablet_counts[key] += 1
+
             elif current_item['item_class'] == 'Omen':
                 # Handle omens - count occurrences
                 if current_item['name']:
@@ -463,6 +518,27 @@ class ItemParser:
                 'display_rarity': rarity  # For UI coloring
             })
 
+        # Add tablet counts as separate items
+        for key, count in self._tablet_counts.items():
+            rarity = self._tablet_rarities.get(key, 'Normal')
+            items.append({
+                'item_class': 'Tablet',
+                'rarity': rarity,
+                'name': key,
+                'stack_size': count,
+                'display_rarity': rarity  # For UI coloring
+            })
+
+        # Add pinnacle key counts as separate items
+        for key, count in self._pinnacle_key_counts.items():
+            items.append({
+                'item_class': 'Pinnacle Keys',
+                'rarity': 'Currency',
+                'name': key,  # Includes _pinkey suffix for red display
+                'stack_size': count,
+                'display_rarity': 'Currency'  # For UI coloring
+            })
+
         # Reset state for next parse
         self._items = {}
         self._waystone_counts = {}
@@ -479,4 +555,7 @@ class ItemParser:
         self._jewel_rarities = {}
         self._relic_counts = {}
         self._relic_rarities = {}
+        self._tablet_counts = {}
+        self._tablet_rarities = {}
+        self._pinnacle_key_counts = {}
         return items

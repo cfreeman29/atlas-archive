@@ -7,6 +7,86 @@ def print_item(item):
     print(f"Stack Size: {item['stack_size']}")
     print("--------")
 
+# Test pinnacle key data
+pinnacle_key_data = """Item Class: Pinnacle Keys
+Rarity: Currency
+Weathered Crisis Fragment
+--------
+Pictographs seem to convey a dire warning.
+--------
+Can be placed in a door in The Burning Monolith.
+
+Item Class: Pinnacle Keys
+Rarity: Currency
+Ancient Crisis Fragment
+--------
+A carved piece of something older than the Vaal.
+--------
+Can be placed in a door in The Burning Monolith."""
+
+# Test tablet data
+tablet_data = """Item Class: Tablet
+Rarity: Magic
+Teeming Precursor Tablet of the Nemesis
+--------
+Item Level: 79
+--------
+5 Maps in Range are Irradiated (implicit)
+--------
+19% increased Magic Monsters in your Maps
+Rare Monsters in your Maps have a 29% chance to have an additional Modifier
+--------
+Can be used in a completed Tower on your Atlas to influence surrounding Maps. Tablets are consumed once placed into a Tower.
+
+Item Class: Tablet
+Rarity: Normal
+Overseer Precursor Tablet
+--------
+Item Level: 82
+--------
+Up to 3 Maps in Range contain Bosses (implicit)
+--------
+Can be used in a completed Tower on your Atlas to influence surrounding Maps. Tablets are consumed once placed into a Tower.
+
+Item Class: Tablet
+Rarity: Magic
+Bountiful Delirium Precursor Tablet of Persecution
+--------
+Item Level: 79
+--------
+9 Maps in Range contain Mirrors of Delirium (implicit)
+--------
+Delirium Monsters in your Maps have 9% increased Pack Size
+10% increased Gold found in your Maps
+--------
+Can be used in a completed Tower on your Atlas to influence surrounding Maps. Tablets are consumed once placed into a Tower.
+
+Item Class: Tablet
+Rarity: Magic
+Teeming Ritual Precursor Tablet of the Foundling
+--------
+Item Level: 81
+--------
+9 Maps in Range contain Ritual Altars (implicit)
+--------
+23% increased Magic Monsters in your Maps
+Revived Monsters from Ritual Altars in your Maps have 20% increased chance to be Magic
+--------
+Can be used in a completed Tower on your Atlas to influence surrounding Maps. Tablets are consumed once placed into a Tower.
+
+Item Class: Tablet
+Rarity: Magic
+Teeming Breach Precursor Tablet of the Invasion
+--------
+Item Level: 80
+--------
+5 Maps in Range contain Breaches (implicit)
+--------
+Breaches in your Maps have 6% increased Monster density
+15% increased Magic Monsters in your Maps
+--------
+Can be used in a completed Tower on your Atlas to influence surrounding Maps. Tablets are consumed once placed into a Tower."""
+
 # Test relic data
 relic_data = """Item Class: Relics
 Rarity: Magic
@@ -412,5 +492,15 @@ for item in items:
 
 print("\nTesting Relic Items:")
 items = parser.parse_items(relic_data)
+for item in items:
+    print_item(item)
+
+print("\nTesting Tablet Items:")
+items = parser.parse_items(tablet_data)
+for item in items:
+    print_item(item)
+
+print("\nTesting Pinnacle Key Items:")
+items = parser.parse_items(pinnacle_key_data)
 for item in items:
     print_item(item)
