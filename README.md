@@ -1,4 +1,4 @@
-# PoE2 Map Tracker
+# Atlas Archive
 
 A PyQt6-based application for tracking Path of Exile 2 map runs, including time spent, boss kills, loot obtained, and endgame mechanics.
 
