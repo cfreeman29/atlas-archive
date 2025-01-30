@@ -21,6 +21,7 @@ class ItemParser:
         self._tablet_rarities = {}
         self._pinnacle_key_counts = {}  # Store pinnacle key counts by type
         self._trials_counts = {}  # Store trials item counts by type
+        self._gem_counts = {}  # Store gem counts by type
 
     def _extract_base_type(self, name, keywords):
         """Helper to extract base type from a magic/normal item name."""
@@ -49,12 +50,21 @@ class ItemParser:
         blocks = []
         current_block = []
         
-        # Find blocks by looking for Item Class markers
+        # Find blocks by looking for Item Class or Rarity markers
         for line in lines:
-            if line.startswith('Item Class:'):
+            if line.startswith('Item Class:') or (line.startswith('Rarity:') and not current_block):
                 if current_block:  # Save previous block if exists
                     blocks.append(current_block)
                 current_block = [line]  # Start new block
+                # If it's a Rarity line without Item Class, add a default Item Class for gems
+                if line.startswith('Rarity:'):
+                    # Check if this is a gem item
+                    is_gem = False
+                    for i, next_line in enumerate(lines[lines.index(line):]):
+                        if 'Uncut' in next_line and 'Gem' in next_line:
+                            is_gem = True
+                            break
+                    current_block.insert(0, 'Item Class: Gems' if is_gem else 'Item Class: Stackable Currency')
             elif current_block is not None:  # Add to current block if one exists
                 current_block.append(line)
                 
@@ -72,7 +82,7 @@ class ItemParser:
                 'item_class': None,
                 'rarity': None,
                 'name': None,
-                'stack_size': None,
+                'stack_size': 1,  # Default to 1
                 'waystone_tier': None,
                 'display_rarity': None  # For UI coloring
             }
@@ -102,7 +112,32 @@ class ItemParser:
                         continue
 
             # Handle different item classes
-            if current_item['item_class'] == 'Stackable Currency':
+            if current_item['item_class'] == 'Gems':
+                # Handle gems - extract level and count occurrences
+                if current_item['name']:
+                    # Extract gem level
+                    gem_level = None
+                    for line in block:
+                        if line.startswith('Level:'):
+                            try:
+                                gem_level = int(line.split(':', 1)[1].strip())
+                                break
+                            except (ValueError, IndexError):
+                                continue
+                    
+                    if gem_level is not None:
+                        # Strip any existing 'xN' from the name
+                        name = current_item['name'].split(' x')[0]
+                        # Add level to name
+                        key = f"{name} {gem_level}_gem"  # Add _gem suffix for silver display
+                        if key not in self._gem_counts:
+                            self._gem_counts[key] = 1
+                        else:
+                            self._gem_counts[key] += 1
+                        # Skip the default currency handling
+                        current_item['stack_size'] = None
+
+            elif current_item['item_class'] == 'Stackable Currency':
                 # Handle stackable currency - combine stack sizes
                 if current_item['name'] and current_item['stack_size']:
                     name = f"{current_item['name']}_{current_item['rarity']}"  # Append rarity to name
@@ -591,4 +626,17 @@ class ItemParser:
 
         # Reset trials counts
         self._trials_counts = {}
+
+        # Add gem counts as separate items
+        for key, count in self._gem_counts.items():
+            items.append({
+                'item_class': 'Gems',
+                'rarity': 'Currency',
+                'name': key,  # Includes _gem suffix for silver display
+                'stack_size': count,
+                'display_rarity': 'Currency'  # For UI coloring
+            })
+
+        # Reset gem counts
+        self._gem_counts = {}
         return items

@@ -7,6 +7,55 @@ def print_item(item):
     print(f"Stack Size: {item['stack_size']}")
     print("--------")
 
+# Test gem data
+gem_data = """Item Class: Gems
+Rarity: Currency
+Uncut Skill Gem
+--------
+Level: 19
+--------
+Item Level: 19
+--------
+Creates a Skill Gem or Level an existing gem to level 19
+--------
+Right Click to engrave a Skill Gem.
+
+Item Class: Gems
+Rarity: Currency
+Uncut Spirit Gem
+--------
+Level: 19
+--------
+Item Level: 19
+--------
+Creates a Persistent Buff Skill Gem or Level an existing gem to Level 19
+--------
+Right Click to engrave a Persistent Buff Skill Gem.
+
+Item Class: Gems
+Rarity: Currency
+Uncut Spirit Gem
+--------
+Level: 19
+--------
+Item Level: 19
+--------
+Creates a Persistent Buff Skill Gem or Level an existing gem to Level 19
+--------
+Right Click to engrave a Persistent Buff Skill Gem.
+
+Item Class: Gems
+Rarity: Currency
+Uncut Support Gem
+--------
+Level: 3
+--------
+Item Level: 3
+--------
+Creates a Support Gem up to level 3
+--------
+Right Click to engrave a Support Gem."""
+
 # Test trials data
 trials_data = """Item Class: Inscribed Ultimatum
 Rarity: Currency
@@ -537,5 +586,10 @@ for item in items:
 
 print("\nTesting Trials Items:")
 items = parser.parse_items(trials_data)
+for item in items:
+    print_item(item)
+
+print("\nTesting Gem Items:")
+items = parser.parse_items(gem_data)
 for item in items:
     print_item(item)

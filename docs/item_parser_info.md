@@ -90,11 +90,27 @@ Rarity: [Rarity Type]
 - Uses Currency rarity
 - Key format: `{name}_trials`
 
-### 10. Omens
+### 10. Gems
+- Supports three types:
+  - Skill Gems (e.g., "Uncut Skill Gem")
+  - Spirit Gems (e.g., "Uncut Spirit Gem")
+  - Support Gems (e.g., "Uncut Support Gem")
+- Identifies by:
+  - "Uncut" and "Gem" in name
+  - "Level:" field
+- Special handling:
+  - Extracts gem level from "Level:" field
+  - Combines identical gems (same type and level)
+  - Adds level to name and '_gem' suffix for silver coloring
+  - Uses Currency rarity
+  - Key format: `{name} {level}_gem`
+- Note: Some gems may not have "Item Class:" line, in which case they're assigned "Gems" class automatically
+
+### 11. Omens
 - Simple counting by name
 - Uses Currency rarity
 
-### 11. Armor
+### 12. Armor
 - Supports multiple armor types (Helmets, Boots, etc.)
 - Similar handling to weapons
 - Key format: `{base_type}_{rarity}`
@@ -161,6 +177,7 @@ To add custom coloring for items:
 Current special suffixes:
 - `_pinkey`: Red color (#ff0000)
 - `_trials`: Rust color (#b7410e)
+- `_gem`: Silver color (#c0c0c0)
 
 ## Testing New Items
 
@@ -197,7 +214,9 @@ Current special suffixes:
 ## Common Issues to Watch For
 
 1. **Item Block Detection**
-   - Always starts with "Item Class:"
+   - Usually starts with "Item Class:"
+   - Some items (like gems) may start with "Rarity:" instead
+   - Need to handle both cases and assign appropriate default class
    - Ensure proper block separation
 
 2. **Name Processing**
@@ -225,3 +244,24 @@ Current special suffixes:
 5. Consider edge cases (missing fields, malformed data)
 6. Keep naming conventions consistent
 7. Reset all state variables after parsing
+8. Handle items without "Item Class:" line by detecting their type from content
+9. Test stack size combining for identical items
+10. Verify color display in both dialog files when adding new special suffixes
+
+## Lessons Learned
+
+1. **Item Class Detection**
+   - Not all items start with "Item Class:" line
+   - Need to examine item content to determine type
+   - Can set default class based on item characteristics
+   - Example: Gems starting with "Rarity:" get "Gems" class
+
+2. **Stack Size Handling**
+   - Items with same name and attributes should combine
+   - Stack size should be preserved when combining
+   - Example: Two identical Spirit Gems combine into stack size 2
+
+3. **Color Display**
+   - Both dialog files need consistent color handling
+   - Special suffix colors override rarity colors
+   - Test color display with different item variations

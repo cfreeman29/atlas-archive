@@ -159,6 +159,8 @@ class ItemEntryDialog(QDialog):
                     color = '#ff0000'  # Red for pinnacle keys
                 elif name.endswith('_trials'):
                     color = '#b7410e'  # Rust color for trials items
+                elif name.endswith('_gem'):
+                    color = '#c0c0c0'  # Silver color for gems
                 else:
                     color = rarity_colors.get(rarity, '#cccccc')
                 item_label = QLabel(f"{display_name} x{quantity}")
