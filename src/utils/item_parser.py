@@ -11,6 +11,7 @@ class ItemParser:
         self._relic_counts = {}  # Store relic counts by type
         self._tablet_counts = {}  # Store tablet counts by type
         self._skillgem_counts = {}  # Store skill gem counts
+        self._trialcoin_counts = {}  # Store trial coin counts
         
         # Store rarity information for each item type
         self._ring_rarities = {}
@@ -102,7 +103,27 @@ class ItemParser:
                         continue
 
             # Handle different item classes
-            if current_item['item_class'] == 'Stackable Currency':
+            if current_item['item_class'] == 'Trial Coins':
+                # Handle trial coins - count occurrences and mark for silver display
+                # Extract area level from block
+                area_level = None
+                for line in block:
+                    if line.startswith('Area Level:'):
+                        try:
+                            area_level = int(line.split(':', 1)[1].strip())
+                            break
+                        except (ValueError, IndexError):
+                            continue
+                
+                if area_level is not None and current_item['name']:
+                    name = f"{current_item['name']} (Area {area_level})"
+                    key = f"{name}_trialcoin"  # Add _trialcoin suffix for silver display
+                    if key not in self._trialcoin_counts:
+                        self._trialcoin_counts[key] = 1
+                    else:
+                        self._trialcoin_counts[key] += 1
+
+            elif current_item['item_class'] == 'Stackable Currency':
                 # Handle stackable currency - combine stack sizes
                 if current_item['name'] and current_item['stack_size']:
                     name = f"{current_item['name']}_{current_item['rarity']}"  # Append rarity to name
@@ -366,7 +387,7 @@ class ItemParser:
                             self._tablet_counts[key] += 1
 
             elif current_item['rarity'] == 'Currency' and any(gem_type in block for gem_type in ['Uncut Skill Gem', 'Uncut Spirit Gem', 'Uncut Support Gem']):
-                # Handle skill gems - count occurrences and mark for white display
+                # Handle skill gems - count occurrences and mark for silver display
                 # Extract level and gem type from block
                 level = None
                 gem_type = None
@@ -383,7 +404,7 @@ class ItemParser:
                 
                 if level is not None and gem_type is not None:
                     name = f"{gem_type} (Level {level})"
-                    key = f"{name}_skillgem"  # Add _skillgem suffix for white display
+                    key = f"{name}_skillgem"  # Add _skillgem suffix for silver display
                     if key not in self._skillgem_counts:
                         self._skillgem_counts[key] = 1
                     else:
@@ -569,9 +590,19 @@ class ItemParser:
             items.append({
                 'item_class': 'Currency',
                 'rarity': 'Currency',
-                'name': key,  # Includes _skillgem suffix for white display
+                'name': key,  # Includes _skillgem suffix for silver display
                 'stack_size': count,
-                'display_rarity': 'Normal'  # For UI coloring - white
+                'display_rarity': 'Normal'  # For UI coloring - silver
+            })
+
+        # Add trial coin counts as separate items
+        for key, count in self._trialcoin_counts.items():
+            items.append({
+                'item_class': 'Trial Coins',
+                'rarity': 'Currency',
+                'name': key,  # Includes _trialcoin suffix for silver display
+                'stack_size': count,
+                'display_rarity': 'Normal'  # For UI coloring - silver
             })
 
         # Reset state for next parse
@@ -594,4 +625,5 @@ class ItemParser:
         self._tablet_rarities = {}
         self._pinnacle_key_counts = {}
         self._skillgem_counts = {}
+        self._trialcoin_counts = {}
         return items
