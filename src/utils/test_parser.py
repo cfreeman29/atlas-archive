@@ -7,6 +7,36 @@ def print_item(item):
     print(f"Stack Size: {item['stack_size']}")
     print("--------")
 
+# Test trials data
+trials_data = """Item Class: Inscribed Ultimatum
+Rarity: Currency
+Inscribed Ultimatum
+--------
+Area Level: 80
+Number of Trials: 10
+--------
+Item Level: 80
+--------
+Mortals spend their lives wondering which
+fate shall be theirs. Chaos takes amusement
+in knowing the answer: all of them.
+--------
+Take this item to The Temple of Chaos to participate in a Trial of Chaos.
+
+Item Class: Trial Coins
+Rarity: Currency
+Djinn Barya
+--------
+Area Level: 80
+Number of Trials: 4
+--------
+Item Level: 80
+--------
+"Take me to the Trial of the Sekhemas.
+I will serve."
+--------
+Take this item to the Relic Altar at the Trial of the Sekhemas."""
+
 # Test pinnacle key data
 pinnacle_key_data = """Item Class: Pinnacle Keys
 Rarity: Currency
@@ -502,5 +532,10 @@ for item in items:
 
 print("\nTesting Pinnacle Key Items:")
 items = parser.parse_items(pinnacle_key_data)
+for item in items:
+    print_item(item)
+
+print("\nTesting Trials Items:")
+items = parser.parse_items(trials_data)
 for item in items:
     print_item(item)

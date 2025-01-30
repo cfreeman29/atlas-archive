@@ -20,6 +20,7 @@ class ItemParser:
         self._relic_rarities = {}
         self._tablet_rarities = {}
         self._pinnacle_key_counts = {}  # Store pinnacle key counts by type
+        self._trials_counts = {}  # Store trials item counts by type
 
     def _extract_base_type(self, name, keywords):
         """Helper to extract base type from a magic/normal item name."""
@@ -364,6 +365,25 @@ class ItemParser:
                         else:
                             self._tablet_counts[key] += 1
 
+            elif current_item['item_class'] in ['Inscribed Ultimatum', 'Trial Coins']:
+                # Handle trials items - count occurrences and mark for rust display
+                if current_item['name']:
+                    # Check for trials-related fields
+                    has_trials = False
+                    for line in block:
+                        if 'Number of Trials:' in line or 'Trial' in current_item['name'] or 'Ultimatum' in current_item['name']:
+                            has_trials = True
+                            break
+                    
+                    if has_trials:
+                        # Strip any existing 'xN' from the name
+                        name = current_item['name'].split(' x')[0]
+                        key = f"{name}_trials"  # Add _trials suffix for rust display
+                        if key not in self._trials_counts:
+                            self._trials_counts[key] = 1
+                        else:
+                            self._trials_counts[key] += 1
+
             elif current_item['item_class'] == 'Omen':
                 # Handle omens - count occurrences
                 if current_item['name']:
@@ -558,4 +578,17 @@ class ItemParser:
         self._tablet_counts = {}
         self._tablet_rarities = {}
         self._pinnacle_key_counts = {}
+
+        # Add trials item counts as separate items
+        for key, count in self._trials_counts.items():
+            items.append({
+                'item_class': 'Trials',
+                'rarity': 'Currency',
+                'name': key,  # Includes _trials suffix for rust display
+                'stack_size': count,
+                'display_rarity': 'Currency'  # For UI coloring
+            })
+
+        # Reset trials counts
+        self._trials_counts = {}
         return items
