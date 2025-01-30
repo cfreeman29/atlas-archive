@@ -106,7 +106,7 @@ class MapRunsDialog(QDialog):
             elif run['boss_count'] == 2:
                 boss_text = "Twin Boss"
                 
-            item_text = (f"{run['map_name']} - {start_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+            item_text = (f"{run['map_name']} (Level {run.get('area_level', 0)}) - {start_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
                         f"Duration: {duration_mins:02d}:{duration_secs:02d} | "
                         f"Boss: {boss_text} | "
                         f"Items: {item_count} | "
@@ -151,7 +151,7 @@ class MapRunsDialog(QDialog):
             with open(file_name, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 # Write header
-                writer.writerow(['ID', 'Map Name', 'Boss Count', 'Start Time', 'Duration', 'Items', 'Status'])
+                writer.writerow(['ID', 'Map Name', 'Area Level', 'Boss Count', 'Start Time', 'Duration', 'Items', 'Status'])
                 # Write data
                 for run in runs:
                     items_text = ", ".join(
@@ -167,6 +167,7 @@ class MapRunsDialog(QDialog):
                     writer.writerow([
                         run['id'],
                         run['map_name'],
+                        run.get('area_level', 0),
                         run['boss_count'],
                         run['start_time'],
                         f"{duration_mins:02d}:{duration_secs:02d}",

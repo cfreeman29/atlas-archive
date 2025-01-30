@@ -43,8 +43,8 @@ class MapRunDetailsDialog(QDialog):
         info_layout = QGridLayout(info_widget)
         info_layout.setSpacing(10)
         
-        # Map Name
-        map_name = QLabel(self.run_data['map_name'])
+        # Map Name and Level
+        map_name = QLabel(f"{self.run_data['map_name']} (Level {self.run_data.get('area_level', 0)})")
         map_name.setStyleSheet("font-size: 18px; font-weight: bold; color: #ff4444;")
         info_layout.addWidget(map_name, 0, 0, 1, 2)
         

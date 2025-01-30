@@ -72,13 +72,18 @@ class LogParser:
                             map_name = re.sub(r'(?<!^)(?=[A-Z])', ' ', raw_name)
                             has_boss = not (len(map_parts) > 1 and map_parts[1] == 'NoBoss')
                             
+                            # Extract level from the original line
+                            level_match = re.search(r'level (\d+) area', line)
+                            area_level = int(level_match.group(1)) if level_match else 0
+                            
                             # Map start event
                             events.append({
                                 'type': 'map_start',
                                 'timestamp': timestamp,
                                 'map_name': map_name,
                                 'has_boss': has_boss,
-                                'seed': seed
+                                'seed': seed,
+                                'area_level': area_level
                             })
                         else:
                             # Any non-map area counts as a map end event

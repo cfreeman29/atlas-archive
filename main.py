@@ -336,13 +336,13 @@ class MapTracker(QMainWindow):
         if self.current_map_seed and seed == self.current_map_seed:
             # Continuing previous map instance
             self.current_map_start = event
-            self.map_name_label.setText(f"In map: {event['map_name']} (Continued)")
+            self.map_name_label.setText(f"In map: {event['map_name']} (Level {event.get('area_level', 0)}) (Continued)")
         else:
             # Starting fresh map instance
             self.current_map_start = event
             self.current_map_seed = seed
             self.current_map_duration = timedelta()
-            self.map_name_label.setText(f"In map: {event['map_name']}")
+            self.map_name_label.setText(f"In map: {event['map_name']} (Level {event.get('area_level', 0)})")
             
             # Reset mechanic selections for new map
             self.breach_icon.set_active(False)
@@ -378,7 +378,7 @@ class MapTracker(QMainWindow):
             next_area = event.get('next_area', '')
             if next_area.startswith('Hideout'):
                 # Just temporarily in hideout, keep the map state
-                self.map_name_label.setText(f"Map paused: {self.current_map_start['map_name']}")
+                self.map_name_label.setText(f"Map paused: {self.current_map_start['map_name']} (Level {self.current_map_start.get('area_level', 0)})")
                 self.end_map_btn.show()  # Show end map button while paused
             else:
                 # Actually leaving the map, consider it complete
@@ -432,7 +432,8 @@ class MapTracker(QMainWindow):
                     self.delirium_icon.is_active(),
                     self.expedition_icon.is_active(),
                     self.ritual_icon.is_active(),
-                    self.breach_count_spin.value()
+                    self.breach_count_spin.value(),
+                    self.current_map_start.get('area_level', 0)
                 )
                 self.current_map_start = None
                 self.current_map_seed = None

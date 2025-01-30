@@ -23,22 +23,23 @@ class Database:
                 has_delirium BOOLEAN DEFAULT 0,
                 has_expedition BOOLEAN DEFAULT 0,
                 has_ritual BOOLEAN DEFAULT 0,
-                breach_count INTEGER DEFAULT 0
+                breach_count INTEGER DEFAULT 0,
+                area_level INTEGER DEFAULT 0
             )
         ''')
         self.conn.commit()
         
     def add_map_run(self, map_name, boss_count, start_time, duration, items, completion_status='complete',
-                    has_breach=False, has_delirium=False, has_expedition=False, has_ritual=False, breach_count=0):
+                    has_breach=False, has_delirium=False, has_expedition=False, has_ritual=False, breach_count=0, area_level=0):
         cursor = self.conn.cursor()
         cursor.execute('''
             INSERT INTO map_runs (
                 map_name, boss_count, start_time, duration, items, value, completion_status,
-                has_breach, has_delirium, has_expedition, has_ritual, breach_count
+                has_breach, has_delirium, has_expedition, has_ritual, breach_count, area_level
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (map_name, boss_count, start_time, duration, json.dumps(items), 0, completion_status,
-              has_breach, has_delirium, has_expedition, has_ritual, breach_count))
+              has_breach, has_delirium, has_expedition, has_ritual, breach_count, area_level))
         self.conn.commit()
         
     def add_items_to_map(self, map_id, items):
