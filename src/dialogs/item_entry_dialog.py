@@ -154,9 +154,11 @@ class ItemEntryDialog(QDialog):
                     'Currency': '#aa9e82'  # Currency color
                 }
                 
-                # Check for _pinkey suffix to color red
+                # Special color handling
                 if name.endswith('_pinkey'):
                     color = '#ff0000'  # Red for pinnacle keys
+                elif name.endswith('_skillgem'):
+                    color = '#c0c0c0'  # Silver for skill gems
                 else:
                     color = rarity_colors.get(rarity, '#cccccc')
                 item_label = QLabel(f"{display_name} x{quantity}")

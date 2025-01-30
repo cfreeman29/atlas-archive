@@ -10,6 +10,7 @@ class ItemParser:
         self._jewel_counts = {}  # Store jewel counts by type
         self._relic_counts = {}  # Store relic counts by type
         self._tablet_counts = {}  # Store tablet counts by type
+        self._skillgem_counts = {}  # Store skill gem counts
         
         # Store rarity information for each item type
         self._ring_rarities = {}
@@ -48,9 +49,9 @@ class ItemParser:
         blocks = []
         current_block = []
         
-        # Find blocks by looking for Item Class markers
+        # Find blocks by looking for Rarity markers
         for line in lines:
-            if line.startswith('Item Class:'):
+            if line.startswith('Rarity:'):
                 if current_block:  # Save previous block if exists
                     blocks.append(current_block)
                 current_block = [line]  # Start new block
@@ -364,6 +365,30 @@ class ItemParser:
                         else:
                             self._tablet_counts[key] += 1
 
+            elif current_item['rarity'] == 'Currency' and any(gem_type in block for gem_type in ['Uncut Skill Gem', 'Uncut Spirit Gem', 'Uncut Support Gem']):
+                # Handle skill gems - count occurrences and mark for white display
+                # Extract level and gem type from block
+                level = None
+                gem_type = None
+                for line in block:
+                    if line.startswith('Level:'):
+                        try:
+                            level = int(line.split(':', 1)[1].strip())
+                        except (ValueError, IndexError):
+                            continue
+                    elif line in ['Uncut Skill Gem', 'Uncut Spirit Gem', 'Uncut Support Gem']:
+                        gem_type = line
+                        current_item['name'] = line
+                        current_item['item_class'] = 'Currency'
+                
+                if level is not None and gem_type is not None:
+                    name = f"{gem_type} (Level {level})"
+                    key = f"{name}_skillgem"  # Add _skillgem suffix for white display
+                    if key not in self._skillgem_counts:
+                        self._skillgem_counts[key] = 1
+                    else:
+                        self._skillgem_counts[key] += 1
+
             elif current_item['item_class'] == 'Omen':
                 # Handle omens - count occurrences
                 if current_item['name']:
@@ -539,6 +564,16 @@ class ItemParser:
                 'display_rarity': 'Currency'  # For UI coloring
             })
 
+        # Add skill gem counts as separate items
+        for key, count in self._skillgem_counts.items():
+            items.append({
+                'item_class': 'Currency',
+                'rarity': 'Currency',
+                'name': key,  # Includes _skillgem suffix for white display
+                'stack_size': count,
+                'display_rarity': 'Normal'  # For UI coloring - white
+            })
+
         # Reset state for next parse
         self._items = {}
         self._waystone_counts = {}
@@ -558,4 +593,5 @@ class ItemParser:
         self._tablet_counts = {}
         self._tablet_rarities = {}
         self._pinnacle_key_counts = {}
+        self._skillgem_counts = {}
         return items

@@ -35,7 +35,35 @@ class LogParser:
                         seed = int(match.group(3))
                         
                         # Track the current area being generated
-                        if area_name.startswith('Map'):
+                        if area_name.startswith('Delirium'):
+                            # Extract level from the original line
+                            level_match = re.search(r'level (\d+) area', line)
+                            level = level_match.group(1) if level_match else '??'
+                            map_name = f'Simulacrum {level}'
+                            has_boss = True  # Simulacrums always have bosses
+                            
+                            events.append({
+                                'type': 'map_start',
+                                'timestamp': timestamp,
+                                'map_name': map_name,
+                                'has_boss': has_boss,
+                                'seed': seed
+                            })
+                        elif area_name.startswith('BreachDomain'):
+                            # Extract level from the original line
+                            level_match = re.search(r'level (\d+) area', line)
+                            level = level_match.group(1) if level_match else '??'
+                            map_name = f'Twisted Domain {level}'
+                            has_boss = True  # Breach domains always have bosses
+                            
+                            events.append({
+                                'type': 'map_start',
+                                'timestamp': timestamp,
+                                'map_name': map_name,
+                                'has_boss': has_boss,
+                                'seed': seed
+                            })
+                        elif area_name.startswith('Map'):
                             # Extract map name and boss status
                             # Format is "Map<name>_NoBoss" or "Map<name>"
                             map_parts = area_name.split('_')
