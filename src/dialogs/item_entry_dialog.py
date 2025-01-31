@@ -161,6 +161,8 @@ class ItemEntryDialog(QDialog):
                     color = '#b7410e'  # Rust color for trials items
                 elif name.endswith('_gem'):
                     color = '#c0c0c0'  # Silver color for gems
+                elif name.endswith('_socket'):
+                    color = '#add8e6'  # Light blue color for socketables
                 else:
                     color = rarity_colors.get(rarity, '#cccccc')
                 item_label = QLabel(f"{display_name} x{quantity}")

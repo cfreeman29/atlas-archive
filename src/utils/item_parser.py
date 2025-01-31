@@ -22,6 +22,7 @@ class ItemParser:
         self._pinnacle_key_counts = {}  # Store pinnacle key counts by type
         self._trials_counts = {}  # Store trials item counts by type
         self._gem_counts = {}  # Store gem counts by type
+        self._socketable_counts = {}  # Store socketable counts by type
 
     def _extract_base_type(self, name, keywords):
         """Helper to extract base type from a magic/normal item name."""
@@ -215,6 +216,19 @@ class ItemParser:
                                 self._ring_rarities[key] = current_item['rarity']
                             else:
                                 self._ring_counts[key] += 1
+
+            elif current_item['item_class'] == 'Socketable':
+                # Handle socketables - count occurrences and mark for light blue display
+                if current_item['name']:
+                    # Strip any existing 'xN' from the name
+                    name = current_item['name'].split(' x')[0]
+                    key = f"{name}_socket"  # Add _socket suffix for light blue display
+                    if key not in self._socketable_counts:
+                        self._socketable_counts[key] = 1
+                    else:
+                        self._socketable_counts[key] += 1
+                    # Skip the default currency handling
+                    current_item['stack_size'] = None
 
             elif current_item['item_class'] == 'Amulets':
                 # Handle amulets - extract type and count occurrences
@@ -668,4 +682,17 @@ class ItemParser:
 
         # Reset gem counts
         self._gem_counts = {}
+
+        # Add socketable counts as separate items
+        for key, count in self._socketable_counts.items():
+            items.append({
+                'item_class': 'Socketable',
+                'rarity': 'Currency',
+                'name': key,  # Includes _socket suffix for light blue display
+                'stack_size': count,
+                'display_rarity': 'Currency'  # For UI coloring
+            })
+
+        # Reset socketable counts
+        self._socketable_counts = {}
         return items
