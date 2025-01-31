@@ -36,7 +36,7 @@ class TestLogParser(unittest.TestCase):
         self.assertEqual(event['timestamp'], datetime(2025, 1, 30, 18, 3, 45))
         
     def test_parse_map_start_no_boss(self):
-        # Test parsing a map start event without a boss
+        # Test parsing a map start event without a boss (with _NoBoss suffix)
         log_line = '2025/01/30 18:03:45 3802609 2caa1679 [DEBUG Client 25000] Generating level 70 area "MapHiddenGrotto_NoBoss" with seed 1681684543\n'
         with open(self.test_log_path, 'w', encoding='utf-8') as f:
             f.write(log_line)
@@ -50,6 +50,35 @@ class TestLogParser(unittest.TestCase):
         self.assertEqual(event['map_level'], 70)
         self.assertFalse(event['has_boss'])
         self.assertEqual(event['seed'], 1681684543)
+        
+    def test_special_maps_no_boss(self):
+        # Test maps that never have bosses even without _NoBoss suffix
+        special_maps = [
+            ('Lost Tower (Tower)', 'MapLostTower'),
+            ('Mesa (Tower)', 'MapMesa'),
+            ('Bluff (Tower)', 'MapBluff'),
+            ('Sinking Spire (Tower)', 'MapSinkingSpire'),
+            ('Alpine Ridge (Tower)', 'MapAlpineRidge')
+        ]
+        
+        for display_name, map_name in special_maps:
+            # Reset the file and parser for each test
+            self.test_log_path.touch()
+            self.log_parser = LogParser(str(self.test_log_path))
+            
+            # Write test content
+            with open(self.test_log_path, 'a', encoding='utf-8') as f:
+                f.write(f'2025/01/30 18:03:45 3802609 2caa1679 [DEBUG Client 25000] Generating level 70 area "{map_name}" with seed 1681684543\n')
+                
+            events = self.log_parser.check_updates()
+            self.assertEqual(len(events), 1, f"Failed to parse events for {display_name}")
+            event = events[0]
+            
+            self.assertEqual(event['type'], 'map_start')
+            self.assertEqual(event['map_name'], display_name)
+            self.assertEqual(event['map_level'], 70)
+            self.assertFalse(event['has_boss'], f"{display_name} should not have a boss")
+            self.assertEqual(event['seed'], 1681684543)
         
     def test_parse_map_end(self):
         # Test parsing a map end event (entering non-map area)
