@@ -28,11 +28,12 @@ class LogParser:
             f.seek(self.last_position)
             for line in f:
                 if "Generating level" in line:
-                    match = re.search(r'(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}).*"([\w_]+)" with seed (\d+)', line)
+                    match = re.search(r'(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}).*level (\d+) area "([\w_]+)" with seed (\d+)', line)
                     if match:
                         timestamp = datetime.strptime(match.group(1), '%Y/%m/%d %H:%M:%S')
-                        area_name = match.group(2)
-                        seed = int(match.group(3))
+                        area_level = int(match.group(2))
+                        area_name = match.group(3)
+                        seed = int(match.group(4))
                         
                         # Track the current area being generated
                         if area_name.startswith('Map'):
@@ -49,6 +50,7 @@ class LogParser:
                                 'type': 'map_start',
                                 'timestamp': timestamp,
                                 'map_name': map_name,
+                                'map_level': area_level,
                                 'has_boss': has_boss,
                                 'seed': seed
                             })
