@@ -219,16 +219,45 @@ class ItemParser:
             elif current_item['item_class'] == 'Amulets':
                 # Handle amulets - extract type and count occurrences
                 if current_item['name']:
+                    # For unique items, use the unique name
                     if current_item['rarity'] == 'Unique':
-                        # For unique items, use the unique name
+                        # Strip any existing 'xN' from the name
                         name = current_item['name'].split(' x')[0]
                         if name not in self._amulet_counts:
                             self._amulet_counts[name] = 1
                             self._amulet_rarities[name] = 'Unique'
                         else:
                             self._amulet_counts[name] += 1
+                    # For rare items, check next line for the actual amulet type
+                    elif current_item['rarity'] == 'Rare':
+                        # Get the next line after the rare name
+                        block_index = None
+                        for i, block in enumerate(blocks):
+                            for line in block:
+                                if line == current_item['name']:
+                                    block_index = i
+                                    break
+                            if block_index is not None:
+                                break
+                        
+                        if block_index is not None and len(blocks[block_index]) > blocks[block_index].index(current_item['name']) + 1:
+                            amulet_line = blocks[block_index][blocks[block_index].index(current_item['name']) + 1]
+                            if 'Amulet' in amulet_line:
+                                name_parts = amulet_line.split()
+                                for i, part in enumerate(name_parts):
+                                    if part == 'Amulet' and i > 0:
+                                        amulet_type = name_parts[i-1]
+                                        # Strip any existing 'xN' from the name
+                                        amulet_type = amulet_type.split(' x')[0]
+                                        key = f"{amulet_type} Amulet"
+                                        if key not in self._amulet_counts:
+                                            self._amulet_counts[key] = 1
+                                            self._amulet_rarities[key] = 'Rare'
+                                        else:
+                                            self._amulet_counts[key] += 1
+                                        break
                     else:
-                        # For non-unique items, find the word before "Amulet" in the name
+                        # For non-rare items, process normally
                         base_type = self._extract_base_type(current_item['name'], ['Amulet'])
                         if base_type:
                             key = f"{base_type}_{current_item['rarity']}"

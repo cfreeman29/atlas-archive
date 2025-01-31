@@ -204,6 +204,43 @@ Item Level: 81
 --------
 Place into an allocated Jewel Socket on the Passive Skill Tree. Right click to remove from the Socket."""
 
+# Test amulet data
+amulet_data = """Item Class: Amulets
+Rarity: Rare
+Vortex Beads
+Lunar Amulet
+--------
+Requirements:
+Level: 56
+--------
+Item Level: 81
+--------
++26 to maximum Energy Shield (implicit)
+--------
+41% increased Armour
+23% increased Rarity of Items found
++13% to Fire Resistance
++9% to Cold Resistance
+
+Item Class: Amulets
+Rarity: Rare
+Blood Beads
+Gold Amulet
+--------
+Requirements:
+Level: 59
+--------
+Item Level: 81
+--------
+19% increased Rarity of Items found (implicit)
+--------
+18% increased Armour
++71 to maximum Energy Shield
++114 to maximum Life
+13% increased Rarity of Items found
++39% to Fire Resistance
+18% increased Mana Regeneration Rate"""
+
 # Test magic items
 magic_data = """Item Class: Belts
 Rarity: Magic
@@ -591,5 +628,10 @@ for item in items:
 
 print("\nTesting Gem Items:")
 items = parser.parse_items(gem_data)
+for item in items:
+    print_item(item)
+
+print("\nTesting Amulet Items:")
+items = parser.parse_items(amulet_data)
 for item in items:
     print_item(item)
