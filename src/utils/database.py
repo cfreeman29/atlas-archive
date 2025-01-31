@@ -113,3 +113,47 @@ class Database:
             run['items'] = json.loads(run['items']) if run['items'] else []
             runs.append(run)
         return runs
+        
+    def clear_database(self):
+        """Clear all records from the database."""
+        cursor = self.conn.cursor()
+        cursor.execute('DELETE FROM map_runs')
+        self.conn.commit()
+        
+    def import_from_csv(self, csv_data):
+        """Import map runs from CSV data."""
+        cursor = self.conn.cursor()
+        for row in csv_data:
+            # Parse duration from MM:SS format
+            duration_parts = row['Duration'].split(':')
+            duration = int(duration_parts[0]) * 60 + int(duration_parts[1])
+            
+            # Parse items from comma-separated string
+            items = []
+            if row['Items'] != 'None':
+                for item_str in row['Items'].split(', '):
+                    if ' x' in item_str:
+                        name, count = item_str.rsplit(' x', 1)
+                        items.append({
+                            'name': name,
+                            'stack_size': int(count),
+                            'rarity': None,
+                            'item_class': None
+                        })
+            
+            cursor.execute('''
+                INSERT INTO map_runs (
+                    map_name, map_level, boss_count, start_time, duration, 
+                    items, completion_status
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                row['Map Name'],
+                int(row['Map Level']),
+                int(row['Boss Count']),
+                row['Start Time'],
+                duration,
+                json.dumps(items),
+                'complete' if row['Status'] == 'Complete' else 'rip'
+            ))
+        self.conn.commit()
