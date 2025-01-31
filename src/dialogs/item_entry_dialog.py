@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
                            QScrollArea, QWidget)
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QClipboard
 from PyQt6.QtWidgets import QApplication
 
@@ -23,9 +23,9 @@ class ItemEntryDialog(QDialog):
         layout.addWidget(instructions)
         
         # Items list in a scroll area
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setStyleSheet("""
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setStyleSheet("""
             QScrollArea {
                 border: 1px solid #3d3d3d;
                 background-color: #2d2d2d;
@@ -59,8 +59,8 @@ class ItemEntryDialog(QDialog):
         self.items_layout.addWidget(self.items_label)
         self.items_layout.addStretch()
         
-        scroll_area.setWidget(self.items_widget)
-        layout.addWidget(scroll_area)
+        self.scroll_area.setWidget(self.items_widget)
+        layout.addWidget(self.scroll_area)
         
         # Done button
         self.done_btn = QPushButton("Done")
@@ -168,3 +168,11 @@ class ItemEntryDialog(QDialog):
                 self.items_layout.addWidget(item_label)
         
         self.items_layout.addStretch()
+        
+        # Scroll to bottom after a brief delay to ensure layout is updated
+        QTimer.singleShot(100, self.scroll_to_bottom)
+
+    def scroll_to_bottom(self):
+        """Scroll the view to the bottom"""
+        scrollbar = self.scroll_area.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())

@@ -4,6 +4,15 @@ from pathlib import Path
 import time
 
 class LogParser:
+    # Maps that never have bosses, even without _NoBoss suffix
+    NO_BOSS_MAPS = {
+        'MapLostTower',
+        'MapMesa',
+        'MapBluff',
+        'MapSinkingSpire',
+        'MapAlpineRidge'
+    }
+    
     def __init__(self, custom_path=None):
         if custom_path:
             self.log_path = Path(custom_path)
@@ -43,7 +52,14 @@ class LogParser:
                             # Remove "Map" prefix and add spaces before capital letters (except first letter)
                             raw_name = map_parts[0][3:]  # Remove "Map" prefix
                             map_name = re.sub(r'(?<!^)(?=[A-Z])', ' ', raw_name)
-                            has_boss = not (len(map_parts) > 1 and map_parts[1] == 'NoBoss')
+                            
+                            # Check for maps that never have bosses
+                            is_tower_map = area_name in self.NO_BOSS_MAPS
+                            has_boss = not (len(map_parts) > 1 and map_parts[1] == 'NoBoss' or is_tower_map)
+                            
+                            # Append (Tower) to special maps
+                            if is_tower_map:
+                                map_name = f"{map_name} (Tower)"
                             
                             # Map start event
                             events.append({
