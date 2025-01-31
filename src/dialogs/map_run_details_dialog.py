@@ -43,10 +43,21 @@ class MapRunDetailsDialog(QDialog):
         info_layout = QGridLayout(info_widget)
         info_layout.setSpacing(10)
         
-        # Map Name
+        # Map Name and Level
+        map_header = QWidget()
+        map_header_layout = QHBoxLayout(map_header)
+        map_header_layout.setSpacing(10)
+        
         map_name = QLabel(self.run_data['map_name'])
         map_name.setStyleSheet("font-size: 18px; font-weight: bold; color: #ff4444;")
-        info_layout.addWidget(map_name, 0, 0, 1, 2)
+        map_header_layout.addWidget(map_name)
+        
+        map_level = QLabel(f"Level {self.run_data['map_level']}")
+        map_level.setStyleSheet("font-size: 16px; color: #888888;")
+        map_header_layout.addWidget(map_level)
+        map_header_layout.addStretch()
+        
+        info_layout.addWidget(map_header, 0, 0, 1, 2)
         
         # Start Time
         start_time = datetime.fromisoformat(self.run_data['start_time'])
@@ -175,6 +186,8 @@ class MapRunDetailsDialog(QDialog):
                         color = '#b7410e'  # Rust color for trials items
                     elif name.endswith('_gem'):
                         color = '#c0c0c0'  # Silver color for gems
+                    elif name.endswith('_socket'):
+                        color = '#add8e6'  # Light blue color for socketables
                     else:
                         color = rarity_colors.get(rarity, '#cccccc')
                     item_text = f"{display_name} x{item['stack_size']}"

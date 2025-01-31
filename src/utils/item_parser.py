@@ -22,6 +22,7 @@ class ItemParser:
         self._pinnacle_key_counts = {}  # Store pinnacle key counts by type
         self._trials_counts = {}  # Store trials item counts by type
         self._gem_counts = {}  # Store gem counts by type
+        self._socketable_counts = {}  # Store socketable counts by type
 
     def _extract_base_type(self, name, keywords):
         """Helper to extract base type from a magic/normal item name."""
@@ -216,19 +217,61 @@ class ItemParser:
                             else:
                                 self._ring_counts[key] += 1
 
+            elif current_item['item_class'] == 'Socketable':
+                # Handle socketables - count occurrences and mark for light blue display
+                if current_item['name']:
+                    # Strip any existing 'xN' from the name
+                    name = current_item['name'].split(' x')[0]
+                    key = f"{name}_socket"  # Add _socket suffix for light blue display
+                    if key not in self._socketable_counts:
+                        self._socketable_counts[key] = 1
+                    else:
+                        self._socketable_counts[key] += 1
+                    # Skip the default currency handling
+                    current_item['stack_size'] = None
+
             elif current_item['item_class'] == 'Amulets':
                 # Handle amulets - extract type and count occurrences
                 if current_item['name']:
+                    # For unique items, use the unique name
                     if current_item['rarity'] == 'Unique':
-                        # For unique items, use the unique name
+                        # Strip any existing 'xN' from the name
                         name = current_item['name'].split(' x')[0]
                         if name not in self._amulet_counts:
                             self._amulet_counts[name] = 1
                             self._amulet_rarities[name] = 'Unique'
                         else:
                             self._amulet_counts[name] += 1
+                    # For rare items, check next line for the actual amulet type
+                    elif current_item['rarity'] == 'Rare':
+                        # Get the next line after the rare name
+                        block_index = None
+                        for i, block in enumerate(blocks):
+                            for line in block:
+                                if line == current_item['name']:
+                                    block_index = i
+                                    break
+                            if block_index is not None:
+                                break
+                        
+                        if block_index is not None and len(blocks[block_index]) > blocks[block_index].index(current_item['name']) + 1:
+                            amulet_line = blocks[block_index][blocks[block_index].index(current_item['name']) + 1]
+                            if 'Amulet' in amulet_line:
+                                name_parts = amulet_line.split()
+                                for i, part in enumerate(name_parts):
+                                    if part == 'Amulet' and i > 0:
+                                        amulet_type = name_parts[i-1]
+                                        # Strip any existing 'xN' from the name
+                                        amulet_type = amulet_type.split(' x')[0]
+                                        key = f"{amulet_type} Amulet"
+                                        if key not in self._amulet_counts:
+                                            self._amulet_counts[key] = 1
+                                            self._amulet_rarities[key] = 'Rare'
+                                        else:
+                                            self._amulet_counts[key] += 1
+                                        break
                     else:
-                        # For non-unique items, find the word before "Amulet" in the name
+                        # For non-rare items, process normally
                         base_type = self._extract_base_type(current_item['name'], ['Amulet'])
                         if base_type:
                             key = f"{base_type}_{current_item['rarity']}"
@@ -639,4 +682,17 @@ class ItemParser:
 
         # Reset gem counts
         self._gem_counts = {}
+
+        # Add socketable counts as separate items
+        for key, count in self._socketable_counts.items():
+            items.append({
+                'item_class': 'Socketable',
+                'rarity': 'Currency',
+                'name': key,  # Includes _socket suffix for light blue display
+                'stack_size': count,
+                'display_rarity': 'Currency'  # For UI coloring
+            })
+
+        # Reset socketable counts
+        self._socketable_counts = {}
         return items

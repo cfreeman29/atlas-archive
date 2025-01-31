@@ -204,6 +204,43 @@ Item Level: 81
 --------
 Place into an allocated Jewel Socket on the Passive Skill Tree. Right click to remove from the Socket."""
 
+# Test amulet data
+amulet_data = """Item Class: Amulets
+Rarity: Rare
+Vortex Beads
+Lunar Amulet
+--------
+Requirements:
+Level: 56
+--------
+Item Level: 81
+--------
++26 to maximum Energy Shield (implicit)
+--------
+41% increased Armour
+23% increased Rarity of Items found
++13% to Fire Resistance
++9% to Cold Resistance
+
+Item Class: Amulets
+Rarity: Rare
+Blood Beads
+Gold Amulet
+--------
+Requirements:
+Level: 59
+--------
+Item Level: 81
+--------
+19% increased Rarity of Items found (implicit)
+--------
+18% increased Armour
++71 to maximum Energy Shield
++114 to maximum Life
+13% increased Rarity of Items found
++39% to Fire Resistance
+18% increased Mana Regeneration Rate"""
+
 # Test magic items
 magic_data = """Item Class: Belts
 Rarity: Magic
@@ -591,5 +628,39 @@ for item in items:
 
 print("\nTesting Gem Items:")
 items = parser.parse_items(gem_data)
+for item in items:
+    print_item(item)
+
+print("\nTesting Amulet Items:")
+items = parser.parse_items(amulet_data)
+for item in items:
+    print_item(item)
+
+# Test socketable data
+socketable_data = """Item Class: Socketable
+Rarity: Currency
+Glacial Rune
+--------
+Stack Size: 10/10
+--------
+Martial Weapon: Adds 6 to 10 Cold Damage
+Armour: +12% to Cold Resistance
+--------
+Place into an empty Rune Socket in a Martial Weapon or Armour to apply its effect to that item. Once socketed it cannot be removed.
+Shift click to unstack.
+
+Item Class: Socketable
+Rarity: Currency
+Soul Core of Citaqualotl
+--------
+Stack Size: 1/10
+--------
+Martial Weapon: 30% increased Elemental Damage with Attacks
+Armour: +5% to all Elemental Resistances
+--------
+Place into an empty Rune Socket in a Martial Weapon or Armour to apply its effect to that item. Once socketed it cannot be removed."""
+
+print("\nTesting Socketable Items:")
+items = parser.parse_items(socketable_data)
 for item in items:
     print_item(item)

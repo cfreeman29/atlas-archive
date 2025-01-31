@@ -2,7 +2,7 @@ import csv
 from datetime import datetime
 from pathlib import Path
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-                           QListWidget, QListWidgetItem, QFileDialog)
+                           QListWidget, QListWidgetItem, QFileDialog, QMessageBox)
 from PyQt6.QtCore import Qt
 
 from .map_run_details_dialog import MapRunDetailsDialog
@@ -33,10 +33,33 @@ class MapRunsDialog(QDialog):
         
         # Buttons
         button_layout = QHBoxLayout()
+        
+        # Export button
         export_btn = QPushButton("Export to CSV")
         export_btn.clicked.connect(self.export_to_csv)
         button_layout.addWidget(export_btn)
+        
+        # Import button
+        import_btn = QPushButton("Import from CSV")
+        import_btn.clicked.connect(self.import_from_csv)
+        button_layout.addWidget(import_btn)
+        
         button_layout.addStretch()
+        
+        # Clear DB button (right-aligned)
+        clear_btn = QPushButton("Clear Database")
+        clear_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #8b0000;
+                color: white;
+            }
+            QPushButton:hover {
+                background-color: #a00000;
+            }
+        """)
+        clear_btn.clicked.connect(self.clear_database)
+        button_layout.addWidget(clear_btn)
+        
         layout.addLayout(button_layout)
         
         self.setStyleSheet("""
@@ -106,7 +129,7 @@ class MapRunsDialog(QDialog):
             elif run['boss_count'] == 2:
                 boss_text = "Twin Boss"
                 
-            item_text = (f"{run['map_name']} - {start_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+            item_text = (f"{run['map_name']} (Level {run['map_level']}) - {start_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
                         f"Duration: {duration_mins:02d}:{duration_secs:02d} | "
                         f"Boss: {boss_text} | "
                         f"Items: {item_count} | "
@@ -151,7 +174,7 @@ class MapRunsDialog(QDialog):
             with open(file_name, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 # Write header
-                writer.writerow(['ID', 'Map Name', 'Boss Count', 'Start Time', 'Duration', 'Items', 'Status'])
+                writer.writerow(['ID', 'Map Name', 'Map Level', 'Boss Count', 'Start Time', 'Duration', 'Items', 'Status'])
                 # Write data
                 for run in runs:
                     items_text = ", ".join(
@@ -167,9 +190,54 @@ class MapRunsDialog(QDialog):
                     writer.writerow([
                         run['id'],
                         run['map_name'],
+                        run['map_level'],
                         run['boss_count'],
                         run['start_time'],
                         f"{duration_mins:02d}:{duration_secs:02d}",
                         items_text if items_text else "None",
                         'Complete' if run['completion_status'] == 'complete' else 'RIP'
                     ])
+                    
+    def import_from_csv(self):
+        file_name, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import Map Runs",
+            str(Path.home()),
+            "CSV Files (*.csv)"
+        )
+        
+        if file_name:
+            try:
+                with open(file_name, 'r', newline='', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    self.db.import_from_csv(reader)
+                    self.load_runs()
+                    QMessageBox.information(
+                        self,
+                        "Import Successful",
+                        "Map runs have been imported successfully."
+                    )
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Import Error",
+                    f"Failed to import map runs: {str(e)}"
+                )
+                
+    def clear_database(self):
+        reply = QMessageBox.question(
+            self,
+            "Clear Database",
+            "Are you sure you want to clear all map run data? This action cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            self.db.clear_database()
+            self.load_runs()
+            QMessageBox.information(
+                self,
+                "Database Cleared",
+                "All map run data has been cleared successfully."
+            )
