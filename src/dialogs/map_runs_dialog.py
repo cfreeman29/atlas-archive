@@ -4,6 +4,8 @@ from pathlib import Path
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
                            QListWidget, QListWidgetItem, QFileDialog, QMessageBox)
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon
+from ..utils.resource_path import get_resource_path
 
 from .map_run_details_dialog import MapRunDetailsDialog
 
@@ -13,6 +15,12 @@ class MapRunsDialog(QDialog):
         self.db = db
         self.setWindowTitle("Map Runs History")
         self.setMinimumSize(800, 600)
+        self.active_filters = {
+            'breach': False,
+            'delirium': False,
+            'expedition': False,
+            'ritual': False
+        }
         self.setup_ui()
         self.load_runs()
         
@@ -20,10 +28,45 @@ class MapRunsDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(15)
         
-        # Header with stats
+        # Top bar with stats and filters
+        top_bar = QHBoxLayout()
+        
+        # Stats label
         self.stats_label = QLabel()
         self.stats_label.setStyleSheet("font-size: 14px; color: #cccccc;")
-        layout.addWidget(self.stats_label)
+        top_bar.addWidget(self.stats_label)
+        
+        # Add stretch to push filters to the right
+        top_bar.addStretch()
+        
+        # Mechanic filter buttons
+        filter_layout = QHBoxLayout()
+        filter_layout.setSpacing(8)
+        
+        # Create filter buttons for each mechanic
+        mechanics = ['breach', 'delirium', 'expedition', 'ritual']
+        self.filter_buttons = {}
+        
+        for mech in mechanics:
+            btn = QPushButton()
+            btn.setFixedSize(32, 32)
+            btn.setCheckable(True)
+            btn.setProperty('mechanic', mech)
+            btn.clicked.connect(self.toggle_filter)
+            
+            # Set icons
+            active_icon = QIcon(get_resource_path(f'src/images/endgame-mech/{mech}.png'))
+            inactive_icon = QIcon(get_resource_path(f'src/images/endgame-mech/{mech}_off.png'))
+            btn.setIcon(inactive_icon)
+            btn.setProperty('active_icon', active_icon)
+            btn.setProperty('inactive_icon', inactive_icon)
+            btn.setIconSize(btn.size())
+            
+            filter_layout.addWidget(btn)
+            self.filter_buttons[mech] = btn
+            
+        top_bar.addLayout(filter_layout)
+        layout.addLayout(top_bar)
         
         # Create list widget
         self.list_widget = QListWidget()
@@ -86,7 +129,7 @@ class MapRunsDialog(QDialog):
                 background-color: #404040;
             }
             QPushButton {
-                background-color: #8b0000;
+                background-color: #2d2d2d;
                 border: none;
                 padding: 8px 16px;
                 color: white;
@@ -94,12 +137,48 @@ class MapRunsDialog(QDialog):
                 min-height: 30px;
             }
             QPushButton:hover {
-                background-color: #a00000;
+                background-color: #404040;
+            }
+            QPushButton[mechanic] {
+                background-color: transparent;
+                padding: 4px;
+            }
+            QPushButton[mechanic]:checked {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            QPushButton[mechanic]:hover {
+                background-color: rgba(255, 255, 255, 0.05);
             }
         """)
         
+    def toggle_filter(self):
+        btn = self.sender()
+        mech = btn.property('mechanic')
+        is_active = btn.isChecked()
+        
+        # Update filter state
+        self.active_filters[mech] = is_active
+        
+        # Update button icon
+        btn.setIcon(btn.property('active_icon') if is_active else btn.property('inactive_icon'))
+        
+        # Reload runs with new filters
+        self.load_runs()
+        
     def load_runs(self):
-        runs = self.db.get_map_runs()
+        all_runs = self.db.get_map_runs()
+        
+        # Filter runs based on active mechanic filters
+        runs = []
+        for run in all_runs:
+            include_run = True
+            for mech, active in self.active_filters.items():
+                if active and not run[f'has_{mech}']:
+                    include_run = False
+                    break
+            if include_run:
+                runs.append(run)
+                
         self.list_widget.clear()
         
         total_duration = 0
@@ -129,11 +208,24 @@ class MapRunsDialog(QDialog):
             elif run['boss_count'] == 2:
                 boss_text = "Twin Boss"
                 
+            # Add mechanic indicators to the summary
+            mechanics_text = []
+            if run['has_breach']:
+                mechanics_text.append(f"Breach ({run['breach_count']})")
+            if run['has_delirium']:
+                mechanics_text.append("Delirium")
+            if run['has_expedition']:
+                mechanics_text.append("Expedition")
+            if run['has_ritual']:
+                mechanics_text.append("Ritual")
+            mechanics_str = f" | Mechanics: {', '.join(mechanics_text)}" if mechanics_text else ""
+                
             item_text = (f"{run['map_name']} (Level {run['map_level']}) - {start_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
                         f"Duration: {duration_mins:02d}:{duration_secs:02d} | "
                         f"Boss: {boss_text} | "
                         f"Items: {item_count} | "
-                        f"Status: {'Complete' if run['completion_status'] == 'complete' else 'RIP'}")
+                        f"Status: {'Complete' if run['completion_status'] == 'complete' else 'RIP'}"
+                        f"{mechanics_str}")
             
             list_item = QListWidgetItem(item_text)
             list_item.setData(Qt.ItemDataRole.UserRole, run)  # Store run data
