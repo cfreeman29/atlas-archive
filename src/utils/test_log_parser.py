@@ -124,6 +124,41 @@ class TestLogParser(unittest.TestCase):
         self.assertEqual(events[2]['map_level'], 75)
         self.assertFalse(events[2]['has_boss'])
         
+    def test_special_map_names(self):
+        # Test special map name transformations for Breach and Delirium
+        test_cases = [
+            # Breach domain should be renamed to "Twisted Domain"
+            ('2025/01/25 12:50:39 393591640 2caa1679 [DEBUG Client 44516] Generating level 80 area "BreachDomain_01" with seed 4160378910\n',
+             'Twisted Domain'),
+            # Delirium areas should be renamed to "Simulacrum"
+            ('2025/01/26 03:04:56 444849093 2caa1679 [DEBUG Client 44516] Generating level 80 area "Delirium_Act1Town" with seed 3401619718\n',
+             'Simulacrum')
+        ]
+        
+        for log_line, expected_name in test_cases:
+            # Reset the file and parser for each test
+            self.test_log_path.touch()
+            self.log_parser = LogParser(str(self.test_log_path))
+            self.log_parser.last_position = 0  # Explicitly reset position
+            
+            with open(self.test_log_path, 'w', encoding='utf-8') as f:
+                f.write(log_line)
+            
+            # Debug: Print file contents and parser state
+            print(f"\nTesting {expected_name}:")
+            with open(self.test_log_path, 'r', encoding='utf-8') as f:
+                print(f"File contents:\n{f.read()}")
+            print(f"Parser position: {self.log_parser.last_position}")
+                
+            events = self.log_parser.check_updates()
+            print(f"Events: {events}")
+            self.assertEqual(len(events), 1, f"Failed to parse event for {expected_name}")
+            event = events[0]
+            
+            self.assertEqual(event['type'], 'map_start')
+            self.assertEqual(event['map_name'], expected_name, f"Expected map name to be {expected_name}")
+            self.assertEqual(event['map_level'], 80)
+            
     def test_log_rotation(self):
         # Test handling of log file rotation
         # File is already created empty and parser is monitoring it from setUp()

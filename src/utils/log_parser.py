@@ -25,8 +25,8 @@ class LogParser:
             return []
             
         current_size = self.log_path.stat().st_size
-        if current_size < self.last_position:
-            # Log file was rotated
+        # Reset position if file is empty or rotated
+        if current_size == 0 or current_size < self.last_position:
             self.last_position = 0
             
         if current_size == self.last_position:
@@ -37,15 +37,43 @@ class LogParser:
             f.seek(self.last_position)
             for line in f:
                 if "Generating level" in line:
-                    match = re.search(r'(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}).*level (\d+) area "([\w_]+)" with seed (\d+)', line)
+                    print(f"Processing line: {line.strip()}")  # Debug print
+                    match = re.search(r'(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}).*level (\d+) area "([^"]+)" with seed (\d+)', line)
+                    if match:
+                        print(f"Match groups: {match.groups()}")  # Debug print
+                    else:
+                        print("No match found")  # Debug print
                     if match:
                         timestamp = datetime.strptime(match.group(1), '%Y/%m/%d %H:%M:%S')
                         area_level = int(match.group(2))
                         area_name = match.group(3)
                         seed = int(match.group(4))
                         
-                        # Track the current area being generated
-                        if area_name.startswith('Map'):
+                        # Handle special map names first
+                        if area_name.startswith('Breach'):
+                            # Breach domains should be renamed to "Twisted Domain"
+                            map_name = "Twisted Domain"
+                            events.append({
+                                'type': 'map_start',
+                                'timestamp': timestamp,
+                                'map_name': map_name,
+                                'map_level': area_level,
+                                'has_boss': True,
+                                'seed': seed
+                            })
+                        elif area_name.startswith('Delirium'):
+                            # Delirium areas should be renamed to "Simulacrum"
+                            map_name = "Simulacrum"
+                            events.append({
+                                'type': 'map_start',
+                                'timestamp': timestamp,
+                                'map_name': map_name,
+                                'map_level': area_level,
+                                'has_boss': True,
+                                'seed': seed
+                            })
+                        # Handle regular map areas
+                        elif area_name.startswith('Map'):
                             # Extract map name and boss status
                             # Format is "Map<name>_NoBoss" or "Map<name>"
                             map_parts = area_name.split('_')
