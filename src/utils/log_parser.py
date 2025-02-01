@@ -50,7 +50,19 @@ class LogParser:
                         seed = int(match.group(4))
                         
                         # Handle special map names first
-                        if area_name.startswith('Breach'):
+                        if area_name.startswith('MapUberBoss_'):
+                            # Extract the second part after MapUberBoss_ and format it
+                            raw_name = area_name[len('MapUberBoss_'):]
+                            map_name = re.sub(r'(?<!^)(?=[A-Z])', ' ', raw_name)
+                            events.append({
+                                'type': 'map_start',
+                                'timestamp': timestamp,
+                                'map_name': map_name,
+                                'map_level': area_level,
+                                'has_boss': True,
+                                'seed': seed
+                            })
+                        elif area_name.startswith('Breach'):
                             # Breach domains should be renamed to "Twisted Domain"
                             map_name = "Twisted Domain"
                             events.append({

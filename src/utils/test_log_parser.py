@@ -1,4 +1,5 @@
 import unittest
+import re
 from pathlib import Path
 from datetime import datetime
 import sys
@@ -132,7 +133,16 @@ class TestLogParser(unittest.TestCase):
              'Twisted Domain'),
             # Delirium areas should be renamed to "Simulacrum"
             ('2025/01/26 03:04:56 444849093 2caa1679 [DEBUG Client 44516] Generating level 80 area "Delirium_Act1Town" with seed 3401619718\n',
-             'Simulacrum')
+             'Simulacrum'),
+            # UberBoss maps should use the second part of the name
+            ('2025/01/30 21:55:41 17718828 2caa1679 [DEBUG Client 5812] Generating level 85 area "MapUberBoss_CopperCitadel" with seed 1643808197\n',
+             'Copper Citadel'),
+            ('2025/01/30 22:15:36 18914015 2caa1679 [DEBUG Client 5812] Generating level 80 area "MapUberBoss_Monolith" with seed 1303021081\n',
+             'Monolith'),
+            ('2025/01/31 00:37:18 27415640 2caa1679 [DEBUG Client 5812] Generating level 72 area "MapUberBoss_IronCitadel" with seed 3497242900\n',
+             'Iron Citadel'),
+            ('2025/01/17 00:04:50 441419875 2caa1679 [DEBUG Client 86976] Generating level 79 area "MapUberBoss_StoneCitadel" with seed 3037379025\n',
+             'Stone Citadel')
         ]
         
         for log_line, expected_name in test_cases:
@@ -157,7 +167,11 @@ class TestLogParser(unittest.TestCase):
             
             self.assertEqual(event['type'], 'map_start')
             self.assertEqual(event['map_name'], expected_name, f"Expected map name to be {expected_name}")
-            self.assertEqual(event['map_level'], 80)
+            
+            # Extract level from the log line to verify
+            level_match = re.search(r'level (\d+)', log_line)
+            expected_level = int(level_match.group(1))
+            self.assertEqual(event['map_level'], expected_level, f"Expected level to be {expected_level}")
             
     def test_log_rotation(self):
         # Test handling of log file rotation
