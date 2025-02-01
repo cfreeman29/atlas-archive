@@ -25,6 +25,8 @@ class ItemParser:
         self._socketable_counts = {}  # Store socketable counts by type
         self._flask_counts = {}  # Store flask counts by type
         self._flask_rarities = {}  # Store flask rarity information
+        self._charm_counts = {}  # Store charm counts by type
+        self._charm_rarities = {}  # Store charm rarity information
 
     def _extract_base_type(self, name, keywords):
         """Helper to extract base type from a magic/normal item name."""
@@ -218,6 +220,31 @@ class ItemParser:
                                 self._ring_rarities[key] = current_item['rarity']
                             else:
                                 self._ring_counts[key] += 1
+
+            elif current_item['item_class'] == 'Charms':
+                # Handle charms - extract type and count occurrences
+                if current_item['name']:
+                    # Get the base name by splitting on 'of' and taking first part
+                    name = current_item['name'].split(' of ')[0]
+                    # Split into words and look for Charm
+                    words = name.split()
+                    charm_type = None
+                    for i, word in enumerate(words):
+                        if word == 'Charm' and i > 0:
+                            # Take the word before Charm
+                            charm_type = f"{words[i-1]} {word}"
+                            break
+                    
+                    if charm_type:
+                        # Add _charm suffix and store rarity
+                        key = f"{charm_type}_charm"
+                        if key not in self._charm_counts:
+                            self._charm_counts[key] = 1
+                            self._charm_rarities[key] = current_item['rarity']
+                        else:
+                            self._charm_counts[key] += 1
+                        # Skip the default currency handling
+                        current_item['stack_size'] = None
 
             elif current_item['item_class'] in ['Life Flasks', 'Mana Flasks']:
                 # Handle flasks - extract type and count occurrences
@@ -738,6 +765,21 @@ class ItemParser:
         # Reset flask counts
         self._flask_counts = {}
         self._flask_rarities = {}
+
+        # Add charm counts as separate items
+        for key, count in self._charm_counts.items():
+            rarity = self._charm_rarities.get(key, 'Normal')
+            items.append({
+                'item_class': 'Charms',
+                'rarity': rarity,
+                'name': key,  # Includes _charm suffix
+                'stack_size': count,
+                'display_rarity': rarity  # For UI coloring based on rarity
+            })
+
+        # Reset charm counts
+        self._charm_counts = {}
+        self._charm_rarities = {}
 
         # Reset socketable counts
         self._socketable_counts = {}
