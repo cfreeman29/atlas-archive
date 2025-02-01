@@ -190,6 +190,8 @@ class MapRunDetailsDialog(QDialog):
                         color = '#add8e6'  # Light blue color for socketables
                     elif name.endswith('_flask'):
                         color = rarity_colors.get(rarity, '#cccccc')  # Use rarity color for flasks
+                    elif name.endswith('_charm'):
+                        color = rarity_colors.get(rarity, '#cccccc')  # Use rarity color for charms
                     else:
                         color = rarity_colors.get(rarity, '#cccccc')
                     item_text = f"{display_name} x{item['stack_size']}"
