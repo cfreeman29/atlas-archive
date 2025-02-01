@@ -23,6 +23,8 @@ class ItemParser:
         self._trials_counts = {}  # Store trials item counts by type
         self._gem_counts = {}  # Store gem counts by type
         self._socketable_counts = {}  # Store socketable counts by type
+        self._flask_counts = {}  # Store flask counts by type
+        self._flask_rarities = {}  # Store flask rarity information
 
     def _extract_base_type(self, name, keywords):
         """Helper to extract base type from a magic/normal item name."""
@@ -216,6 +218,35 @@ class ItemParser:
                                 self._ring_rarities[key] = current_item['rarity']
                             else:
                                 self._ring_counts[key] += 1
+
+            elif current_item['item_class'] in ['Life Flasks', 'Mana Flasks']:
+                # Handle flasks - extract type and count occurrences
+                if current_item['name']:
+                    # Get the base name by splitting on 'of' and taking first part
+                    name = current_item['name'].split(' of ')[0]
+                    # Split into words and look for Life/Mana Flask
+                    words = name.split()
+                    flask_type = None
+                    for i, word in enumerate(words):
+                        if word in ['Flask'] and i > 0:
+                            if words[i-1] in ['Life', 'Mana']:
+                                # Take the word before Life/Mana Flask if it exists
+                                if i > 1:
+                                    flask_type = f"{words[i-2]} {words[i-1]} {word}"
+                                else:
+                                    flask_type = f"{words[i-1]} {word}"
+                                break
+                    
+                    if flask_type:
+                        # Add _flask suffix and store rarity
+                        key = f"{flask_type}_flask"
+                    if key not in self._flask_counts:
+                        self._flask_counts[key] = 1
+                        self._flask_rarities[key] = current_item['rarity']
+                    else:
+                        self._flask_counts[key] += 1
+                    # Skip the default currency handling
+                    current_item['stack_size'] = None
 
             elif current_item['item_class'] == 'Socketable':
                 # Handle socketables - count occurrences and mark for light blue display
@@ -692,6 +723,21 @@ class ItemParser:
                 'stack_size': count,
                 'display_rarity': 'Currency'  # For UI coloring
             })
+
+        # Add flask counts as separate items
+        for key, count in self._flask_counts.items():
+            rarity = self._flask_rarities.get(key, 'Normal')
+            items.append({
+                'item_class': 'Flasks',
+                'rarity': rarity,
+                'name': key,  # Includes _flask suffix
+                'stack_size': count,
+                'display_rarity': rarity  # For UI coloring based on rarity
+            })
+
+        # Reset flask counts
+        self._flask_counts = {}
+        self._flask_rarities = {}
 
         # Reset socketable counts
         self._socketable_counts = {}
