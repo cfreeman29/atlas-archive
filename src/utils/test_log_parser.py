@@ -142,7 +142,10 @@ class TestLogParser(unittest.TestCase):
             ('2025/01/31 00:37:18 27415640 2caa1679 [DEBUG Client 5812] Generating level 72 area "MapUberBoss_IronCitadel" with seed 3497242900\n',
              'Iron Citadel'),
             ('2025/01/17 00:04:50 441419875 2caa1679 [DEBUG Client 86976] Generating level 79 area "MapUberBoss_StoneCitadel" with seed 3037379025\n',
-             'Stone Citadel')
+             'Stone Citadel'),
+            # Expedition areas should be prefixed with "Expedition: "
+            ('2025/01/30 21:55:41 17718828 2caa1679 [DEBUG Client 5812] Generating level 79 area "ExpeditionLogBook_Tropical" with seed 1097045634\n',
+             'Expedition: Tropical')
         ]
         
         for log_line, expected_name in test_cases:

@@ -50,7 +50,19 @@ class LogParser:
                         seed = int(match.group(4))
                         
                         # Handle special map names first
-                        if area_name.startswith('MapUberBoss_'):
+                        if area_name.startswith('ExpeditionLogBook_'):
+                            # Extract the second part after ExpeditionLogBook_ and prefix with "Expedition: "
+                            raw_name = area_name[len('ExpeditionLogBook_'):]
+                            map_name = f"Expedition: {raw_name}"
+                            events.append({
+                                'type': 'map_start',
+                                'timestamp': timestamp,
+                                'map_name': map_name,
+                                'map_level': area_level,
+                                'has_boss': False,
+                                'seed': seed
+                            })
+                        elif area_name.startswith('MapUberBoss_'):
                             # Extract the second part after MapUberBoss_ and format it
                             raw_name = area_name[len('MapUberBoss_'):]
                             map_name = re.sub(r'(?<!^)(?=[A-Z])', ' ', raw_name)
