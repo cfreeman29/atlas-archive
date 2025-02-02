@@ -222,8 +222,60 @@ class DataWorkbenchDialog(QDialog):
             # Reset index to get sequential numbers for x-axis
             filtered_df = filtered_df.reset_index(drop=True)
             
-            # Create scatter plot
-            ax.scatter(filtered_df.index, filtered_df['currency_count'], alpha=0.6)
+            # Create scatter plot with hover annotations
+            scatter = ax.scatter(filtered_df.index, filtered_df['currency_count'], alpha=0.6, picker=True)
+            
+            # Create annotation (initially hidden)
+            annot = ax.annotate("", xy=(0,0), xytext=(10,10), textcoords="offset points",
+                              bbox=dict(boxstyle="round,pad=0.5", fc="#1a1a1a", ec="gray", alpha=0.8),
+                              color='white')
+            annot.set_visible(False)
+            
+            def update_annot(ind):
+                pos = scatter.get_offsets()[ind["ind"][0]]
+                annot.xy = pos
+                
+                # Get the map run data for this point
+                run_idx = ind["ind"][0]
+                run = filtered_df.iloc[run_idx]
+                
+                # Format mechanics text
+                mechanics = []
+                if run['has_breach']:
+                    mechanics.append(f"Breach ({run['breach_count']})")
+                if run['has_delirium']:
+                    mechanics.append("Delirium")
+                if run['has_expedition']:
+                    mechanics.append("Expedition")
+                if run['has_ritual']:
+                    mechanics.append("Ritual")
+                mechanics_text = ", ".join(mechanics) if mechanics else "None"
+                
+                # Format duration
+                duration_mins = run['duration'] // 60
+                duration_secs = run['duration'] % 60
+                
+                # Create data plate text
+                text = (f"Map: {run['map_name']} (Level {run['map_level']})\n"
+                       f"Duration: {duration_mins:02d}:{duration_secs:02d}\n"
+                       f"Mechanics: {mechanics_text}\n"
+                       f"{currency_type}: {run['currency_count']}")
+                
+                annot.set_text(text)
+            
+            def hover(event):
+                vis = annot.get_visible()
+                if event.inaxes == ax:
+                    cont, ind = scatter.contains(event)
+                    if cont:
+                        update_annot(ind)
+                        annot.set_visible(True)
+                        self.currency_canvas.draw_idle()
+                    elif vis:
+                        annot.set_visible(False)
+                        self.currency_canvas.draw_idle()
+            
+            self.currency_canvas.mpl_connect("motion_notify_event", hover)
             ax.set_xlabel('Map Run Number')
             ax.set_ylabel(f'{currency_type} Count')
             title = f'{currency_type} per Map Run'
