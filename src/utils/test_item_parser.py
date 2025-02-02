@@ -664,3 +664,97 @@ print("\nTesting Socketable Items:")
 items = parser.parse_items(socketable_data)
 for item in items:
     print_item(item)
+
+# Test flask data
+flask_data = """Item Class: Life Flasks
+Rarity: Magic
+Concentrated Ultimate Life Flask of the Surgeon
+--------
+Quality: +20% (augmented)
+Recovers 1855 (augmented) Life over 3 Seconds
+Consumes 10 of 75 Charges on use
+Currently has 75 Charges
+--------
+Requirements:
+Level: 60
+--------
+Item Level: 60
+--------
+68% increased Amount Recovered
+35% Chance to gain a Charge when you Kill an Enemy
+--------
+Right click to drink. Can only hold charges while in belt. Refill at Wells or by killing monsters.
+
+Item Class: Mana Flasks
+Rarity: Magic
+Concentrated Ultimate Mana Flask of the Abundant
+--------
+Quality: +20% (augmented)
+Recovers 621 (augmented) Mana over 3 Seconds
+Consumes 10 of 118 (augmented) Charges on use
+Currently has 118 Charges
+--------
+Requirements:
+Level: 60
+--------
+Item Level: 66
+--------
+67% increased Amount Recovered
+58% increased Charges
+--------
+Right click to drink. Can only hold charges while in belt. Refill at Wells or by killing monsters."""
+
+print("\nTesting Flask Items:")
+items = parser.parse_items(flask_data)
+for item in items:
+    print_item(item)
+
+# Test charm data
+charm_data = """Item Class: Charms
+Rarity: Magic
+Analyst's Thawing Charm of the Medic
+--------
+Lasts 3.70 (augmented) Seconds
+Consumes 80 of 80 Charges on use
+Currently has 0 Charges
+Grants Immunity to Freeze
+--------
+Requirements:
+Level: 16
+--------
+Item Level: 49
+--------
+Used when you become Frozen (implicit)
+--------
+23% increased Duration
+22% Chance to gain a Charge when you Kill an Enemy
+--------
+Used automatically when condition is met. Can only hold charges while in belt. Refill at Wells or by killing monsters.
+
+Item Class: Charms
+Rarity: Magic
+Analyst's Golden Charm of the Bountiful
+--------
+Lasts 1.20 (augmented) Seconds
+Consumes 80 of 120 (augmented) Charges on use
+Currently has 120 Charges
+20% increased Rarity of Items found
+--------
+Requirements:
+Level: 50
+--------
+Item Level: 79
+--------
+Used when you Kill a Rare or Unique Enemy (implicit)
+--------
+24% increased Duration
+51% increased Charges
+--------
+Used automatically when condition is met. Can only hold charges while in belt. Refill at Wells or by killing monsters.
+--------
+Corrupted"""
+
+print("\nTesting Charm Items:")
+items = parser.parse_items(charm_data)
+for item in items:
+    print_item(item)

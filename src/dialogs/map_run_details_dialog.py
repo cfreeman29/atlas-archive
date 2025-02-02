@@ -1,9 +1,10 @@
 from datetime import datetime
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-                           QGridLayout, QWidget, QScrollArea)
+                           QGridLayout, QWidget, QScrollArea, QFileDialog, QMessageBox)
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 from src.utils.resource_path import get_resource_path
+from src.utils.card_generator import generate_map_run_card
 
 class MechanicIcon(QLabel):
     def __init__(self, base_path, active=False, parent=None):
@@ -188,6 +189,10 @@ class MapRunDetailsDialog(QDialog):
                         color = '#c0c0c0'  # Silver color for gems
                     elif name.endswith('_socket'):
                         color = '#add8e6'  # Light blue color for socketables
+                    elif name.endswith('_flask'):
+                        color = rarity_colors.get(rarity, '#cccccc')  # Use rarity color for flasks
+                    elif name.endswith('_charm'):
+                        color = rarity_colors.get(rarity, '#cccccc')  # Use rarity color for charms
                     else:
                         color = rarity_colors.get(rarity, '#cccccc')
                     item_text = f"{display_name} x{item['stack_size']}"
@@ -204,10 +209,30 @@ class MapRunDetailsDialog(QDialog):
         scroll_area.setWidget(scroll_content)
         layout.addWidget(scroll_area)
         
+        # Buttons layout
+        buttons_layout = QHBoxLayout()
+        
+        # Export button
+        export_btn = QPushButton("Export as Image")
+        export_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2d2d2d;
+            }
+            QPushButton:hover {
+                background-color: #404040;
+            }
+        """)
+        export_btn.clicked.connect(self.export_as_image)
+        buttons_layout.addWidget(export_btn)
+        
+        buttons_layout.addStretch()
+        
         # Delete button
         delete_btn = QPushButton("Delete Run")
         delete_btn.clicked.connect(self.handle_delete)
-        layout.addWidget(delete_btn)
+        buttons_layout.addWidget(delete_btn)
+        
+        layout.addLayout(buttons_layout)
         
         self.setStyleSheet("""
             QDialog {
@@ -231,3 +256,25 @@ class MapRunDetailsDialog(QDialog):
         
     def handle_delete(self):
         self.done(2)  # Use custom return code 2 to indicate deletion
+        
+    def export_as_image(self):
+        file_name, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Map Run Card",
+            f"map_run_{self.run_data['map_name']}_{self.run_data['map_level']}.png",
+            "PNG Images (*.png)"
+        )
+        
+        if file_name:
+            if generate_map_run_card(self.run_data, file_name):
+                QMessageBox.information(
+                    self,
+                    "Export Successful",
+                    "Map run card has been exported successfully."
+                )
+            else:
+                QMessageBox.critical(
+                    self,
+                    "Export Error",
+                    "Failed to generate map run card."
+                )
