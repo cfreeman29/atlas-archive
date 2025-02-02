@@ -15,11 +15,13 @@ atlas-archive/
 │   ├── dialogs/         # UI dialog components
 │   │   ├── __init__.py
 │   │   ├── boss_kill_dialog.py
+│   │   ├── data_workbench_dialog.py  # Data visualization
 │   │   ├── item_entry_dialog.py
 │   │   ├── map_completion_dialog.py
 │   │   ├── map_run_details_dialog.py
 │   │   └── map_runs_dialog.py
 │   ├── images/          # UI assets
+│   │   ├── app/        # Application icons
 │   │   └── endgame-mech/  # Mechanic icons
 │   │       ├── breach.png
 │   │       ├── breach_off.png
@@ -31,7 +33,9 @@ atlas-archive/
 │   │       └── ritual_off.png
 │   └── utils/           # Utility modules
 │       ├── __init__.py
+│       ├── card_generator.py  # Data visualization
 │       ├── database.py  # SQLite database handling
+│       ├── debug_log_parser.py
 │       ├── item_parser.py # Item clipboard parsing
 │       ├── log_parser.py  # Client.txt log parsing
 │       ├── resource_path.py # Resource path resolution
@@ -43,19 +47,50 @@ atlas-archive/
 
 ## Features
 
+### Core Functionality
 - Track map run duration with automatic pause detection
 - Record boss kills (including twin bosses)
-- Log items found (via clipboard)
-- Track endgame mechanics:
-  - Breach (with counter)
-  - Delirium
-  - Expedition
-  - Ritual
-- View detailed run history
-- Export data to CSV
-- Dark mode UI
 - Automatic map detection via Client.txt monitoring
 - Pause/resume tracking when entering hideout
+- Dark mode UI
+
+### Map Area Features
+- Track map area levels
+- Proper tower titles for better identification
+- Support for special areas:
+  - Twisted Domain and Delirium areas
+  - Citadels and Monolith boss areas
+  - Expedition areas
+
+### Endgame Mechanics Tracking
+- Breach (with counter)
+- Delirium
+- Expedition
+- Ritual
+- Mechanic filtering in map run dialog
+
+### Item Management
+Advanced item parsing support for:
+- Amulets and Rings
+- Runes and Soul Cores
+- Charms and Flasks
+- Skill Gems
+- Trials items
+- Crisis Fragments
+- Proper rarity detection and coloring
+
+### Data Analysis & Visualization
+- Comprehensive data visualization with graphs
+- Enhanced graph readability
+- Data rollup functionality
+- Export visualizations to PNG
+- Filter and analyze runs by mechanics
+
+### Database Management
+- Export data for backup
+- Database restore capability
+- Database clear option
+- Extended schema for map levels
 
 ## Requirements
 
@@ -115,6 +150,7 @@ The application uses SQLite to store map run data in `poe2_maps.db`. The schema 
 ### map_runs table
 - id (PRIMARY KEY)
 - map_name (TEXT)
+- map_level (INTEGER) - Area level of the map
 - boss_count (INTEGER) - 0: No boss, 1: Single boss, 2: Twin boss
 - start_time (TIMESTAMP)
 - duration (INTEGER) - in seconds
