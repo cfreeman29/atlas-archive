@@ -8,6 +8,7 @@ from PyQt6.QtGui import QIcon
 from ..utils.resource_path import get_resource_path
 
 from .map_run_details_dialog import MapRunDetailsDialog
+from .data_workbench_dialog import DataWorkbenchDialog
 
 class MapRunsDialog(QDialog):
     def __init__(self, db, parent=None):
@@ -77,15 +78,26 @@ class MapRunsDialog(QDialog):
         # Buttons
         button_layout = QHBoxLayout()
         
+        # Left side buttons
+        left_buttons = QHBoxLayout()
+        
         # Export button
         export_btn = QPushButton("Export to CSV")
         export_btn.clicked.connect(self.export_to_csv)
-        button_layout.addWidget(export_btn)
+        left_buttons.addWidget(export_btn)
         
         # Import button
         import_btn = QPushButton("Import from CSV")
         import_btn.clicked.connect(self.import_from_csv)
-        button_layout.addWidget(import_btn)
+        left_buttons.addWidget(import_btn)
+        
+        # Data Analysis button
+        analyze_btn = QPushButton("Data Analysis")
+        analyze_btn.clicked.connect(self.show_data_analysis)
+        left_buttons.addWidget(analyze_btn)
+        
+        button_layout.addLayout(left_buttons)
+        
         
         button_layout.addStretch()
         
@@ -333,3 +345,7 @@ class MapRunsDialog(QDialog):
                 "Database Cleared",
                 "All map run data has been cleared successfully."
             )
+            
+    def show_data_analysis(self):
+        dialog = DataWorkbenchDialog(self.db, self)
+        dialog.exec()
