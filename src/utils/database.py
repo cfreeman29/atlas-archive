@@ -144,9 +144,10 @@ class Database:
             cursor.execute('''
                 INSERT INTO map_runs (
                     map_name, map_level, boss_count, start_time, duration, 
-                    items, completion_status
+                    items, completion_status, has_breach, has_delirium,
+                    has_expedition, has_ritual, breach_count
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 row['Map Name'],
                 int(row['Map Level']),
@@ -154,6 +155,11 @@ class Database:
                 row['Start Time'],
                 duration,
                 json.dumps(items),
-                'complete' if row['Status'] == 'Complete' else 'rip'
+                'complete' if row['Status'] == 'Complete' else 'rip',
+                row['Has Breach'] == 'Yes',
+                row['Has Delirium'] == 'Yes',
+                row['Has Expedition'] == 'Yes',
+                row['Has Ritual'] == 'Yes',
+                int(row['Breach Count'])
             ))
         self.conn.commit()

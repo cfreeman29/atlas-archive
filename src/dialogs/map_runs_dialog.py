@@ -277,8 +277,12 @@ class MapRunsDialog(QDialog):
             runs = self.db.get_map_runs()
             with open(file_name, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
-                # Write header
-                writer.writerow(['ID', 'Map Name', 'Map Level', 'Boss Count', 'Start Time', 'Duration', 'Items', 'Status'])
+                # Write header with all columns
+                writer.writerow([
+                    'ID', 'Map Name', 'Map Level', 'Boss Count', 'Start Time', 'Duration',
+                    'Items', 'Status', 'Has Breach', 'Has Delirium', 'Has Expedition',
+                    'Has Ritual', 'Breach Count'
+                ])
                 # Write data
                 for run in runs:
                     items_text = ", ".join(
@@ -299,7 +303,12 @@ class MapRunsDialog(QDialog):
                         run['start_time'],
                         f"{duration_mins:02d}:{duration_secs:02d}",
                         items_text if items_text else "None",
-                        'Complete' if run['completion_status'] == 'complete' else 'RIP'
+                        'Complete' if run['completion_status'] == 'complete' else 'RIP',
+                        'Yes' if run['has_breach'] else 'No',
+                        'Yes' if run['has_delirium'] else 'No',
+                        'Yes' if run['has_expedition'] else 'No',
+                        'Yes' if run['has_ritual'] else 'No',
+                        run['breach_count']
                     ])
                     
     def import_from_csv(self):
