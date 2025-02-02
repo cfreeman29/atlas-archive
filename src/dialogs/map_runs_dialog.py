@@ -8,6 +8,7 @@ from PyQt6.QtGui import QIcon
 from ..utils.resource_path import get_resource_path
 
 from .map_run_details_dialog import MapRunDetailsDialog
+from .data_workbench_dialog import DataWorkbenchDialog
 
 class MapRunsDialog(QDialog):
     def __init__(self, db, parent=None):
@@ -77,15 +78,26 @@ class MapRunsDialog(QDialog):
         # Buttons
         button_layout = QHBoxLayout()
         
+        # Left side buttons
+        left_buttons = QHBoxLayout()
+        
         # Export button
         export_btn = QPushButton("Export to CSV")
         export_btn.clicked.connect(self.export_to_csv)
-        button_layout.addWidget(export_btn)
+        left_buttons.addWidget(export_btn)
         
         # Import button
         import_btn = QPushButton("Import from CSV")
         import_btn.clicked.connect(self.import_from_csv)
-        button_layout.addWidget(import_btn)
+        left_buttons.addWidget(import_btn)
+        
+        # Data Analysis button
+        analyze_btn = QPushButton("Data Analysis")
+        analyze_btn.clicked.connect(self.show_data_analysis)
+        left_buttons.addWidget(analyze_btn)
+        
+        button_layout.addLayout(left_buttons)
+        
         
         button_layout.addStretch()
         
@@ -265,8 +277,12 @@ class MapRunsDialog(QDialog):
             runs = self.db.get_map_runs()
             with open(file_name, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
-                # Write header
-                writer.writerow(['ID', 'Map Name', 'Map Level', 'Boss Count', 'Start Time', 'Duration', 'Items', 'Status'])
+                # Write header with all columns
+                writer.writerow([
+                    'ID', 'Map Name', 'Map Level', 'Boss Count', 'Start Time', 'Duration',
+                    'Items', 'Status', 'Has Breach', 'Has Delirium', 'Has Expedition',
+                    'Has Ritual', 'Breach Count'
+                ])
                 # Write data
                 for run in runs:
                     items_text = ", ".join(
@@ -287,7 +303,12 @@ class MapRunsDialog(QDialog):
                         run['start_time'],
                         f"{duration_mins:02d}:{duration_secs:02d}",
                         items_text if items_text else "None",
-                        'Complete' if run['completion_status'] == 'complete' else 'RIP'
+                        'Complete' if run['completion_status'] == 'complete' else 'RIP',
+                        'Yes' if run['has_breach'] else 'No',
+                        'Yes' if run['has_delirium'] else 'No',
+                        'Yes' if run['has_expedition'] else 'No',
+                        'Yes' if run['has_ritual'] else 'No',
+                        run['breach_count']
                     ])
                     
     def import_from_csv(self):
@@ -333,3 +354,7 @@ class MapRunsDialog(QDialog):
                 "Database Cleared",
                 "All map run data has been cleared successfully."
             )
+            
+    def show_data_analysis(self):
+        dialog = DataWorkbenchDialog(self.db, self)
+        dialog.exec()
