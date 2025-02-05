@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                            QHBoxLayout, QPushButton, QLabel, QDialog, QFileDialog,
-                           QDialogButtonBox, QSpinBox)
+                           QDialogButtonBox, QSpinBox, QMessageBox)
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap, QCursor, QIcon
 
@@ -16,6 +16,7 @@ from src.dialogs.boss_kill_dialog import BossKillDialog
 from src.dialogs.map_completion_dialog import MapCompletionDialog
 from src.dialogs.map_runs_dialog import MapRunsDialog
 from src.dialogs.item_entry_dialog import ItemEntryDialog
+from src.dialogs.character_dialog import CharacterDialog
 
 class ClickableLabel(QLabel):
     def __init__(self, base_path, parent=None):
@@ -66,6 +67,7 @@ class MapTracker(QMainWindow):
         self.current_map_start = None
         self.current_map_seed = None
         self.current_map_duration = timedelta()
+        self.current_character = None
         self.monitoring = False
         self.map_timer = QTimer()
         self.map_timer.timeout.connect(self.update_map_timer)
@@ -296,6 +298,10 @@ class MapTracker(QMainWindow):
                 font-weight: bold;
                 color: #ff4444;
             }
+            QLabel#character {
+                font-size: 18px;
+                color: #44ff44;
+            }
             QLabel#timer {
                 font-size: 20px;
                 color: #ffffff;
@@ -343,6 +349,10 @@ class MapTracker(QMainWindow):
         self.select_log_btn.clicked.connect(self.select_log_file)
         control_layout.addWidget(self.select_log_btn)
         
+        self.select_char_btn = QPushButton("Select Character")
+        self.select_char_btn.clicked.connect(self.show_character_dialog)
+        control_layout.addWidget(self.select_char_btn)
+        
         self.view_runs_btn = QPushButton("View Runs")
         self.view_runs_btn.clicked.connect(self.show_runs_dialog)
         control_layout.addWidget(self.view_runs_btn)
@@ -357,6 +367,10 @@ class MapTracker(QMainWindow):
         self.map_name_label = QLabel("Not in map")
         self.map_name_label.setObjectName("map_name")
         map_layout.addWidget(self.map_name_label)
+        
+        self.character_label = QLabel("No character selected")
+        self.character_label.setObjectName("character")
+        map_layout.addWidget(self.character_label)
         
         self.timer_label = QLabel("00:00")
         self.timer_label.setObjectName("timer")
@@ -435,6 +449,20 @@ class MapTracker(QMainWindow):
         # Connect breach icon click to counter toggle
         self.breach_icon.mousePressEvent = self.on_breach_icon_click
 
+    def show_character_dialog(self):
+        dialog = CharacterDialog(self.db, self)
+        dialog.character_selected.connect(self.on_character_selected)
+        dialog.exec()
+    
+    def on_character_selected(self, character_id):
+        self.current_character = self.db.get_character(character_id)
+        if self.current_character:
+            self.character_label.setText(
+                f"Character: {self.current_character['name']} "
+                f"(Level {self.current_character['level']} {self.current_character['class']}"
+                f"{' - ' + self.current_character['ascendancy'] if self.current_character['ascendancy'] else ''})"
+            )
+    
     def on_breach_icon_click(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.breach_icon.active = not self.breach_icon.active
@@ -480,6 +508,11 @@ class MapTracker(QMainWindow):
         if not self.monitoring:
             if not self.log_parser.log_path:
                 self.map_name_label.setText("Please select Client.txt first")
+                return
+            
+            if not self.current_character:
+                QMessageBox.warning(self, "No Character Selected", 
+                                  "Please select a character before starting map monitoring.")
                 return
                 
             self.monitoring = True
@@ -616,7 +649,8 @@ class MapTracker(QMainWindow):
                     self.delirium_icon.is_active(),
                     self.expedition_icon.is_active(),
                     self.ritual_icon.is_active(),
-                    self.breach_count_spin.value()
+                    self.breach_count_spin.value(),
+                    self.current_character['id'] if self.current_character else None
                 )
                 self.current_map_start = None
                 self.current_map_seed = None
