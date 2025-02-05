@@ -277,7 +277,10 @@ class MapRunDetailsDialog(QDialog):
         )
         
         if file_name:
-            if generate_map_run_card(self.run_data, file_name):
+            # Add db reference to run_data for character info
+            run_data_with_db = dict(self.run_data)
+            run_data_with_db['db'] = self.db
+            if generate_map_run_card(run_data_with_db, file_name):
                 QMessageBox.information(
                     self,
                     "Export Successful",
