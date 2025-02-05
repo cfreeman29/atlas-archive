@@ -31,6 +31,7 @@ class MapRunDetailsDialog(QDialog):
     def __init__(self, run_data, parent=None):
         super().__init__(parent)
         self.run_data = run_data
+        self.db = parent.db if parent else None
         self.setWindowTitle(f"Map Run Details - {run_data['map_name']}")
         self.setMinimumSize(600, 400)
         self.setup_ui()
@@ -71,22 +72,32 @@ class MapRunDetailsDialog(QDialog):
         info_layout.addWidget(QLabel("Duration:"), 2, 0)
         info_layout.addWidget(QLabel(f"{duration_mins:02d}:{duration_secs:02d}"), 2, 1)
         
+        # Character Info
+        if self.run_data.get('character_id') and self.db:
+            char = self.db.get_character(self.run_data['character_id'])
+            if char:
+                info_layout.addWidget(QLabel("Character:"), 3, 0)
+                char_label = QLabel(f"{char['name']} (Level {char['level']} {char['class']}"
+                                  f"{' - ' + char['ascendancy'] if char['ascendancy'] else ''})")
+                char_label.setStyleSheet("color: #44ff44;")
+                info_layout.addWidget(char_label, 3, 1)
+        
         # Boss Count
-        info_layout.addWidget(QLabel("Boss Status:"), 3, 0)
+        info_layout.addWidget(QLabel("Boss Status:"), 4, 0)
         boss_text = "No Boss"
         if self.run_data['boss_count'] == 1:
             boss_text = "Single Boss"
         elif self.run_data['boss_count'] == 2:
             boss_text = "Twin Boss"
-        info_layout.addWidget(QLabel(boss_text), 3, 1)
+        info_layout.addWidget(QLabel(boss_text), 4, 1)
         
         # Status
         status_text = "Complete" if self.run_data['completion_status'] == 'complete' else "RIP"
         status_color = "#006400" if self.run_data['completion_status'] == 'complete' else "#8b0000"
-        info_layout.addWidget(QLabel("Status:"), 4, 0)
+        info_layout.addWidget(QLabel("Status:"), 5, 0)
         status_label = QLabel(status_text)
         status_label.setStyleSheet(f"color: {status_color}; font-weight: bold;")
-        info_layout.addWidget(status_label, 4, 1)
+        info_layout.addWidget(status_label, 5, 1)
         
         layout.addWidget(info_widget)
         
@@ -266,7 +277,10 @@ class MapRunDetailsDialog(QDialog):
         )
         
         if file_name:
-            if generate_map_run_card(self.run_data, file_name):
+            # Add db reference to run_data for character info
+            run_data_with_db = dict(self.run_data)
+            run_data_with_db['db'] = self.db
+            if generate_map_run_card(run_data_with_db, file_name):
                 QMessageBox.information(
                     self,
                     "Export Successful",

@@ -25,6 +25,29 @@ class DataWorkbenchDialog(QDialog):
         # Create tab widget
         self.tab_widget = QTabWidget()
         
+        # Character Analysis Tab
+        character_tab = QWidget()
+        character_layout = QVBoxLayout(character_tab)
+        
+        # Character selection controls
+        char_controls_layout = QHBoxLayout()
+        
+        self.char_combo = QComboBox()
+        self.char_combo.addItem('All Characters')
+        self.char_combo.currentIndexChanged.connect(self.update_character_analysis)
+        char_controls_layout.addWidget(QLabel("Character:"))
+        char_controls_layout.addWidget(self.char_combo)
+        
+        char_controls_layout.addStretch()
+        character_layout.addLayout(char_controls_layout)
+        
+        # Matplotlib figure for character analysis
+        self.character_figure = Figure(figsize=(8, 6))
+        self.character_canvas = FigureCanvas(self.character_figure)
+        character_layout.addWidget(self.character_canvas)
+        
+        self.tab_widget.addTab(character_tab, "Character Analysis")
+        
         # Currency Analysis Tab
         currency_tab = QWidget()
         currency_layout = QVBoxLayout(currency_tab)
@@ -147,10 +170,18 @@ class DataWorkbenchDialog(QDialog):
         """)
         
     def load_data(self):
+        # Load map runs
         runs = self.db.get_map_runs()
         self.df = pd.DataFrame(runs)
         
-        # No need to process items data as it's already in list format from the database
+        # Load characters and add to combo box
+        characters = self.db.get_characters()
+        for char in characters:
+            self.char_combo.addItem(
+                f"{char['name']} (Level {char['level']} {char['class']}"
+                f"{' - ' + char['ascendancy'] if char['ascendancy'] else ''})",
+                char['id']
+            )
         
         # Extract unique map levels, names, and currency types
         map_levels = sorted(self.df['map_level'].unique())
@@ -168,9 +199,122 @@ class DataWorkbenchDialog(QDialog):
         self.currency_type_combo.addItems(sorted(currency_types))
         
         # Update visualizations
+        self.update_character_analysis()
         self.update_currency_analysis()
         self.update_mechanic_analysis()
         self.update_raw_data_table()
+        
+    def update_character_analysis(self):
+        # Clear the figure
+        self.character_figure.clear()
+        
+        # Create subplots for different metrics
+        gs = self.character_figure.add_gridspec(2, 2)
+        ax1 = self.character_figure.add_subplot(gs[0, 0])  # Map completion rate
+        ax2 = self.character_figure.add_subplot(gs[0, 1])  # Average duration
+        ax3 = self.character_figure.add_subplot(gs[1, :])  # Map level progression
+        
+        # Get selected character
+        char_id = self.char_combo.currentData()
+        
+        if char_id is not None:
+            # Filter data for selected character
+            char_df = self.df[self.df['character_id'] == char_id]
+            
+            if len(char_df) > 0:
+                # Map completion rate pie chart
+                complete = len(char_df[char_df['completion_status'] == 'complete'])
+                rips = len(char_df[char_df['completion_status'] == 'rip'])
+                ax1.pie([complete, rips], labels=['Complete', 'RIP'], colors=['#44ff44', '#ff4444'],
+                       autopct='%1.1f%%')
+                ax1.set_title('Map Completion Rate')
+                
+                # Average duration by map level
+                avg_duration = char_df.groupby('map_level')['duration'].mean() / 60  # Convert to minutes
+                ax2.bar(avg_duration.index, avg_duration.values)
+                ax2.set_xlabel('Map Level')
+                ax2.set_ylabel('Average Duration (minutes)')
+                ax2.set_title('Average Map Duration by Level')
+                
+                # Map level progression over time
+                ax3.plot(pd.to_datetime(char_df['start_time']), char_df['map_level'], marker='o')
+                ax3.set_xlabel('Date')
+                ax3.set_ylabel('Map Level')
+                ax3.set_title('Map Level Progression')
+                ax3.tick_params(axis='x', rotation=45)
+                
+                # Add summary text
+                total_maps = len(char_df)
+                avg_duration_all = char_df['duration'].mean() / 60
+                ax3.text(0.02, 0.98, 
+                        f'Total Maps: {total_maps}\n'
+                        f'Average Duration: {avg_duration_all:.1f}m\n'
+                        f'Highest Level: {char_df["map_level"].max()}',
+                        transform=ax3.transAxes,
+                        verticalalignment='top',
+                        bbox=dict(facecolor='#1a1a1a', alpha=0.8))
+            else:
+                for ax in [ax1, ax2, ax3]:
+                    ax.text(0.5, 0.5, 'No data available for selected character',
+                           horizontalalignment='center',
+                           verticalalignment='center',
+                           color='white')
+        else:
+            # Compare all characters
+            char_stats = []
+            for char in self.db.get_characters():
+                char_df = self.df[self.df['character_id'] == char['id']]
+                if len(char_df) > 0:
+                    stats = {
+                        'name': char['name'],
+                        'total_maps': len(char_df),
+                        'completion_rate': len(char_df[char_df['completion_status'] == 'complete']) / len(char_df) * 100,
+                        'avg_duration': char_df['duration'].mean() / 60,
+                        'highest_level': char_df['map_level'].max()
+                    }
+                    char_stats.append(stats)
+            
+            if char_stats:
+                char_df = pd.DataFrame(char_stats)
+                
+                # Completion rate comparison
+                ax1.bar(char_df['name'], char_df['completion_rate'])
+                ax1.set_xlabel('Character')
+                ax1.set_ylabel('Completion Rate (%)')
+                ax1.set_title('Map Completion Rate by Character')
+                ax1.tick_params(axis='x', rotation=45)
+                
+                # Average duration comparison
+                ax2.bar(char_df['name'], char_df['avg_duration'])
+                ax2.set_xlabel('Character')
+                ax2.set_ylabel('Average Duration (minutes)')
+                ax2.set_title('Average Map Duration by Character')
+                ax2.tick_params(axis='x', rotation=45)
+                
+                # Map level comparison
+                ax3.bar(char_df['name'], char_df['highest_level'])
+                ax3.set_xlabel('Character')
+                ax3.set_ylabel('Highest Map Level')
+                ax3.set_title('Highest Map Level by Character')
+                ax3.tick_params(axis='x', rotation=45)
+            else:
+                for ax in [ax1, ax2, ax3]:
+                    ax.text(0.5, 0.5, 'No map data available',
+                           horizontalalignment='center',
+                           verticalalignment='center',
+                           color='white')
+        
+        # Style the plots
+        for ax in [ax1, ax2, ax3]:
+            ax.set_facecolor('#2d2d2d')
+            ax.tick_params(colors='white')
+            ax.xaxis.label.set_color('white')
+            ax.yaxis.label.set_color('white')
+            ax.title.set_color('white')
+        
+        self.character_figure.patch.set_facecolor('#1a1a1a')
+        self.character_figure.tight_layout()
+        self.character_canvas.draw()
         
     def get_currency_count(self, items, currency_type):
         count = 0
@@ -255,11 +399,19 @@ class DataWorkbenchDialog(QDialog):
                 duration_mins = run['duration'] // 60
                 duration_secs = run['duration'] % 60
                 
+                # Get character info
+                char_info = ""
+                if run['character_id']:
+                    char = self.db.get_character(run['character_id'])
+                    if char:
+                        char_info = f"\nCharacter: {char['name']}"
+                
                 # Create data plate text
                 text = (f"Map: {run['map_name']} (Level {run['map_level']})\n"
                        f"Duration: {duration_mins:02d}:{duration_secs:02d}\n"
                        f"Mechanics: {mechanics_text}\n"
-                       f"{currency_type}: {run['currency_count']}")
+                       f"{currency_type}: {run['currency_count']}"
+                       f"{char_info}")
                 
                 annot.set_text(text)
             
@@ -377,7 +529,7 @@ class DataWorkbenchDialog(QDialog):
         
     def update_raw_data_table(self):
         # Set up table columns
-        columns = ['Map Name', 'Level', 'Duration', 'Mechanics', 'Currency Found']
+        columns = ['Map Name', 'Level', 'Duration', 'Character', 'Mechanics', 'Currency Found']
         self.data_table.setColumnCount(len(columns))
         self.data_table.setHorizontalHeaderLabels(columns)
         
@@ -393,6 +545,15 @@ class DataWorkbenchDialog(QDialog):
             secs = run['duration'] % 60
             self.data_table.setItem(i, 2, QTableWidgetItem(f"{mins:02d}:{secs:02d}"))
             
+            # Character
+            char_text = ""
+            if run['character_id']:
+                char = self.db.get_character(run['character_id'])
+                if char:
+                    char_text = (f"{char['name']} (Level {char['level']} {char['class']}"
+                               f"{' - ' + char['ascendancy'] if char['ascendancy'] else ''})")
+            self.data_table.setItem(i, 3, QTableWidgetItem(char_text))
+            
             # Mechanics
             mechanics = []
             if run['has_breach']:
@@ -403,7 +564,7 @@ class DataWorkbenchDialog(QDialog):
                 mechanics.append("Expedition")
             if run['has_ritual']:
                 mechanics.append("Ritual")
-            self.data_table.setItem(i, 3, QTableWidgetItem(", ".join(mechanics)))
+            self.data_table.setItem(i, 4, QTableWidgetItem(", ".join(mechanics)))
             
             # Currency summary
             currency_summary = []
@@ -412,7 +573,7 @@ class DataWorkbenchDialog(QDialog):
                     name = item['name'].replace('_Currency', '')
                     count = item.get('stack_size', 0)
                     currency_summary.append(f"{name} x{count}")
-            self.data_table.setItem(i, 4, QTableWidgetItem(", ".join(currency_summary)))
+            self.data_table.setItem(i, 5, QTableWidgetItem(", ".join(currency_summary)))
             
         # Adjust column widths
         self.data_table.resizeColumnsToContents()
