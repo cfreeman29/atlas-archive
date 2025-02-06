@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
                            QLabel, QLineEdit, QComboBox, QSpinBox, QListWidget,
                            QListWidgetItem, QMessageBox)
 from .edit_character_dialog import EditCharacterDialog
+from .build_manager_dialog import BuildManagerDialog
 from PyQt6.QtCore import Qt, pyqtSignal
 
 class CharacterDialog(QDialog):
@@ -81,6 +82,10 @@ class CharacterDialog(QDialog):
         edit_btn.clicked.connect(self.edit_character)
         button_layout.addWidget(edit_btn)
         
+        builds_btn = QPushButton("Manage Builds")
+        builds_btn.clicked.connect(self.manage_builds)
+        button_layout.addWidget(builds_btn)
+        
         cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(self.reject)
         button_layout.addWidget(cancel_btn)
@@ -154,8 +159,15 @@ class CharacterDialog(QDialog):
         self.character_list.clear()
         characters = self.db.get_characters()
         for char in characters:
-            item = QListWidgetItem(f"{char['name']} (Level {char['level']} {char['class']}"
-                                 f"{' - ' + char['ascendancy'] if char['ascendancy'] else ''})")
+            # Get current build info
+            current_build = self.db.get_current_build(char['id'])
+            build_info = f"\nCurrent Build: {current_build['url']}" if current_build else "\nNo build selected"
+            
+            item = QListWidgetItem(
+                f"{char['name']} (Level {char['level']} {char['class']}"
+                f"{' - ' + char['ascendancy'] if char['ascendancy'] else ''}"
+                f"{build_info}"
+            )
             item.setData(Qt.ItemDataRole.UserRole, char['id'])
             self.character_list.addItem(item)
     
@@ -195,3 +207,14 @@ class CharacterDialog(QDialog):
         dialog = EditCharacterDialog(self.db, char_id, self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.load_characters()  # Refresh the list to show updated info
+            
+    def manage_builds(self):
+        item = self.character_list.currentItem()
+        if not item:
+            QMessageBox.warning(self, "Error", "Please select a character to manage builds")
+            return
+            
+        char_id = item.data(Qt.ItemDataRole.UserRole)
+        dialog = BuildManagerDialog(self.db, char_id, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.load_characters()  # Refresh the list to show updated build info
