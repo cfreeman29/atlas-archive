@@ -218,7 +218,7 @@ class MapRunsDialog(QDialog):
         if self.selected_character:
             builds = self.db.get_builds(self.selected_character)
             for build in builds:
-                self.build_combo.addItem(build['url'], build['id'])
+                self.build_combo.addItem(build['name'], build['id'])
                 
     def on_build_filter_changed(self, index):
         """Handle build filter selection"""
@@ -295,7 +295,7 @@ class MapRunsDialog(QDialog):
             if run['build_id']:
                 build = self.db.get_build(run['build_id'])
                 if build:
-                    build_info = f" | Build: {build['url']}"
+                    build_info = f" | Build: {build['name']} ({build['url']})"
             
             # Format item count
             item_count = len([item for item in run['items'] 

@@ -88,7 +88,7 @@ class MapRunDetailsDialog(QDialog):
                 build = None
                 if self.run_data.get('build_id'):
                     build = self.db.get_build(self.run_data['build_id'])
-                build_label = QLabel(build['url'] if build else "No build")
+                build_label = QLabel(f"{build['name']} ({build['url']})" if build else "No build")
                 build_label.setStyleSheet("color: #44ff44;")
                 info_layout.addWidget(build_label, 4, 1)
         

@@ -39,6 +39,7 @@ class Database:
             CREATE TABLE IF NOT EXISTS builds (
                 id INTEGER PRIMARY KEY,
                 character_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
                 url TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -187,7 +188,7 @@ class Database:
         # Export builds
         with open(file_path.replace('.csv', '_builds.csv'), 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(['ID', 'Character ID', 'URL', 'Created At', 'Updated At'])
+            writer.writerow(['ID', 'Character ID', 'Name', 'URL', 'Created At', 'Updated At'])
             cursor.execute('SELECT * FROM builds ORDER BY id')
             writer.writerows(cursor.fetchall())
         
@@ -265,11 +266,12 @@ class Database:
                     reader = csv.DictReader(f)
                     for row in reader:
                         cursor.execute('''
-                            INSERT INTO builds (id, character_id, url, created_at, updated_at)
-                            VALUES (?, ?, ?, ?, ?)
+                            INSERT INTO builds (id, character_id, name, url, created_at, updated_at)
+                            VALUES (?, ?, ?, ?, ?, ?)
                         ''', (
                             int(row['ID']),
                             int(row['Character ID']),
+                            row['Name'],
                             row['URL'],
                             row['Created At'],
                             row['Updated At']
@@ -402,13 +404,13 @@ class Database:
             runs.append(run)
         return runs
         
-    def add_build(self, character_id, url):
+    def add_build(self, character_id, name, url):
         """Add a new build for a character"""
         cursor = self.conn.cursor()
         cursor.execute('''
-            INSERT INTO builds (character_id, url)
-            VALUES (?, ?)
-        ''', (character_id, url))
+            INSERT INTO builds (character_id, name, url)
+            VALUES (?, ?, ?)
+        ''', (character_id, name, url))
         self.conn.commit()
         return cursor.lastrowid
         
@@ -434,15 +436,25 @@ class Database:
         row = cursor.fetchone()
         return dict(zip(columns, row)) if row else None
         
-    def update_build(self, build_id, url):
-        """Update a build's URL"""
+    def update_build(self, build_id, name=None, url=None):
+        """Update a build's details"""
         cursor = self.conn.cursor()
-        cursor.execute('''
-            UPDATE builds 
-            SET url = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-        ''', (url, build_id))
-        self.conn.commit()
+        updates = []
+        params = []
+        
+        if name is not None:
+            updates.append("name = ?")
+            params.append(name)
+        if url is not None:
+            updates.append("url = ?")
+            params.append(url)
+            
+        if updates:
+            updates.append("updated_at = CURRENT_TIMESTAMP")
+            query = f"UPDATE builds SET {', '.join(updates)} WHERE id = ?"
+            params.append(build_id)
+            cursor.execute(query, params)
+            self.conn.commit()
         
     def delete_build(self, build_id):
         """Delete a build"""

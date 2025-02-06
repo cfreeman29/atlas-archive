@@ -37,11 +37,25 @@ class BuildManagerDialog(QDialog):
         self.load_builds()
         
         # New build section
-        new_build_layout = QHBoxLayout()
+        new_build_layout = QVBoxLayout()
+        
+        # Name input
+        name_layout = QHBoxLayout()
+        name_layout.addWidget(QLabel("Name:"))
+        self.name_input = QLineEdit()
+        self.name_input.setPlaceholderText("Enter build name")
+        name_layout.addWidget(self.name_input)
+        new_build_layout.addLayout(name_layout)
+        
+        # URL input
+        url_layout = QHBoxLayout()
+        url_layout.addWidget(QLabel("URL:"))
         self.url_input = QLineEdit()
         self.url_input.setPlaceholderText("Enter build URL")
-        new_build_layout.addWidget(self.url_input)
+        url_layout.addWidget(self.url_input)
+        new_build_layout.addLayout(url_layout)
         
+        # Add button
         add_btn = QPushButton("Add Build")
         add_btn.clicked.connect(self.add_build)
         new_build_layout.addWidget(add_btn)
@@ -129,15 +143,21 @@ class BuildManagerDialog(QDialog):
         self.build_list.clear()
         builds = self.db.get_builds(self.character_id)
         for build in builds:
-            item = QListWidgetItem(build['url'])
+            item = QListWidgetItem(f"{build['name']} ({build['url']})")
             if build['is_current']:
-                item.setText(f"{build['url']} (Current)")
+                item.setText(f"{build['name']} ({build['url']}) (Current)")
                 item.setForeground(Qt.GlobalColor.green)
             item.setData(Qt.ItemDataRole.UserRole, build)
             self.build_list.addItem(item)
             
     def add_build(self):
+        name = self.name_input.text().strip()
         url = self.url_input.text().strip()
+        
+        if not name:
+            QMessageBox.warning(self, "Error", "Please enter a build name")
+            return
+            
         if not url:
             QMessageBox.warning(self, "Error", "Please enter a build URL")
             return
@@ -146,7 +166,8 @@ class BuildManagerDialog(QDialog):
             QMessageBox.warning(self, "Error", "Please enter a valid URL")
             return
             
-        self.db.add_build(self.character_id, url)
+        self.db.add_build(self.character_id, name, url)
+        self.name_input.clear()
         self.url_input.clear()
         self.load_builds()
         
@@ -156,20 +177,55 @@ class BuildManagerDialog(QDialog):
             return
             
         build = item.data(Qt.ItemDataRole.UserRole)
-        url, ok = QLineEdit.getText(
-            self, 
-            "Edit Build URL", 
-            "Enter new URL:",
-            QLineEdit.EchoMode.Normal,
-            build['url']
-        )
+        # Create a dialog for editing
+        edit_dialog = QDialog(self)
+        edit_dialog.setWindowTitle("Edit Build")
+        edit_layout = QVBoxLayout(edit_dialog)
         
-        if ok and url.strip():
-            if not self.validate_url(url.strip()):
+        # Name input
+        name_layout = QHBoxLayout()
+        name_layout.addWidget(QLabel("Name:"))
+        name_input = QLineEdit(build['name'])
+        name_layout.addWidget(name_input)
+        edit_layout.addLayout(name_layout)
+        
+        # URL input
+        url_layout = QHBoxLayout()
+        url_layout.addWidget(QLabel("URL:"))
+        url_input = QLineEdit(build['url'])
+        url_layout.addWidget(url_input)
+        edit_layout.addLayout(url_layout)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        save_btn = QPushButton("Save")
+        save_btn.clicked.connect(edit_dialog.accept)
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.clicked.connect(edit_dialog.reject)
+        button_layout.addWidget(save_btn)
+        button_layout.addWidget(cancel_btn)
+        edit_layout.addLayout(button_layout)
+        
+        # Apply dialog styling
+        edit_dialog.setStyleSheet(self.styleSheet())
+        
+        if edit_dialog.exec() == QDialog.DialogCode.Accepted:
+            name = name_input.text().strip()
+            url = url_input.text().strip()
+            
+            if not name:
+                QMessageBox.warning(self, "Error", "Please enter a build name")
+                return
+                
+            if not url:
+                QMessageBox.warning(self, "Error", "Please enter a build URL")
+                return
+                
+            if not self.validate_url(url):
                 QMessageBox.warning(self, "Error", "Please enter a valid URL")
                 return
                 
-            self.db.update_build(build['id'], url.strip())
+            self.db.update_build(build['id'], name=name, url=url)
             self.load_builds()
             
     def delete_build(self):
