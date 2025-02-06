@@ -6,13 +6,45 @@ import json
 class Database:
     def __init__(self):
         self.conn = sqlite3.connect('poe2_maps.db')
-        # Drop existing tables to recreate with new schema
         cursor = self.conn.cursor()
-        cursor.execute("DROP TABLE IF EXISTS map_runs")
-        cursor.execute("DROP TABLE IF EXISTS builds")
-        cursor.execute("DROP TABLE IF EXISTS characters")
-        self.conn.commit()
         self.create_tables()
+        self.update_schema()
+        
+    def update_schema(self):
+        """Update database schema for existing databases"""
+        cursor = self.conn.cursor()
+        
+        # Check if builds table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='builds'")
+        if cursor.fetchone():
+            # Check if name column exists
+            cursor.execute("PRAGMA table_info(builds)")
+            columns = [col[1] for col in cursor.fetchall()]
+            if 'name' not in columns:
+                # Create a new builds table with the name column
+                cursor.execute('''
+                    CREATE TABLE builds_new (
+                        id INTEGER PRIMARY KEY,
+                        character_id INTEGER NOT NULL,
+                        name TEXT NOT NULL DEFAULT 'Default Build',
+                        url TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (character_id) REFERENCES characters (id) DEFERRABLE INITIALLY DEFERRED
+                    )
+                ''')
+                
+                # Copy data from old table to new table
+                cursor.execute('''
+                    INSERT INTO builds_new (id, character_id, url, created_at, updated_at)
+                    SELECT id, character_id, url, created_at, updated_at FROM builds
+                ''')
+                
+                # Drop old table and rename new table
+                cursor.execute('DROP TABLE builds')
+                cursor.execute('ALTER TABLE builds_new RENAME TO builds')
+                
+                self.conn.commit()
         
     def create_tables(self):
         cursor = self.conn.cursor()
