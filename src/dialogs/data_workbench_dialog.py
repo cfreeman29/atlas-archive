@@ -29,7 +29,7 @@ class DataWorkbenchDialog(QDialog):
         character_tab = QWidget()
         character_layout = QVBoxLayout(character_tab)
         
-        # Character selection controls
+        # Character and build selection controls
         char_controls_layout = QHBoxLayout()
         
         self.char_combo = QComboBox()
@@ -37,6 +37,15 @@ class DataWorkbenchDialog(QDialog):
         self.char_combo.currentIndexChanged.connect(self.update_character_analysis)
         char_controls_layout.addWidget(QLabel("Character:"))
         char_controls_layout.addWidget(self.char_combo)
+        
+        self.char_build_combo = QComboBox()
+        self.char_build_combo.addItem('All Builds')
+        self.char_build_combo.currentIndexChanged.connect(self.update_character_analysis)
+        char_controls_layout.addWidget(QLabel("Build:"))
+        char_controls_layout.addWidget(self.char_build_combo)
+        
+        # Connect character selection to build filter update
+        self.char_combo.currentIndexChanged.connect(self.update_char_build_combo)
         
         char_controls_layout.addStretch()
         character_layout.addLayout(char_controls_layout)
@@ -47,6 +56,29 @@ class DataWorkbenchDialog(QDialog):
         character_layout.addWidget(self.character_canvas)
         
         self.tab_widget.addTab(character_tab, "Character Analysis")
+        
+        # Build Analysis Tab
+        build_tab = QWidget()
+        build_layout = QVBoxLayout(build_tab)
+        
+        # Build selection controls
+        build_controls_layout = QHBoxLayout()
+        
+        self.build_combo = QComboBox()
+        self.build_combo.addItem('All Builds')
+        self.build_combo.currentIndexChanged.connect(self.update_build_analysis)
+        build_controls_layout.addWidget(QLabel("Build:"))
+        build_controls_layout.addWidget(self.build_combo)
+        
+        build_controls_layout.addStretch()
+        build_layout.addLayout(build_controls_layout)
+        
+        # Matplotlib figure for build analysis
+        self.build_figure = Figure(figsize=(8, 6))
+        self.build_canvas = FigureCanvas(self.build_figure)
+        build_layout.addWidget(self.build_canvas)
+        
+        self.tab_widget.addTab(build_tab, "Build Analysis")
         
         # Currency Analysis Tab
         currency_tab = QWidget()
@@ -174,7 +206,7 @@ class DataWorkbenchDialog(QDialog):
         runs = self.db.get_map_runs()
         self.df = pd.DataFrame(runs)
         
-        # Load characters and add to combo box
+        # Load characters and builds
         characters = self.db.get_characters()
         for char in characters:
             self.char_combo.addItem(
@@ -182,6 +214,11 @@ class DataWorkbenchDialog(QDialog):
                 f"{' - ' + char['ascendancy'] if char['ascendancy'] else ''})",
                 char['id']
             )
+            # Load builds for this character
+            builds = self.db.get_builds(char['id'])
+            for build in builds:
+                build_text = f"{build['name']} ({char['name']})"
+                self.build_combo.addItem(build_text, build['id'])
         
         # Extract unique map levels, names, and currency types
         map_levels = sorted(self.df['map_level'].unique())
@@ -199,10 +236,195 @@ class DataWorkbenchDialog(QDialog):
         self.currency_type_combo.addItems(sorted(currency_types))
         
         # Update visualizations
+        self.update_build_analysis()
         self.update_character_analysis()
         self.update_currency_analysis()
         self.update_mechanic_analysis()
         self.update_raw_data_table()
+        
+    def update_char_build_combo(self):
+        """Update build filter dropdown based on selected character"""
+        self.char_build_combo.clear()
+        self.char_build_combo.addItem('All Builds')
+        
+        char_id = self.char_combo.currentData()
+        if char_id is not None:
+            builds = self.db.get_builds(char_id)
+            for build in builds:
+                self.char_build_combo.addItem(build['name'], build['id'])
+                
+    def update_raw_data_table(self):
+        # Set up table columns
+        columns = ['Map Name', 'Level', 'Duration', 'Character', 'Build', 'Mechanics', 'Currency Found']
+        self.data_table.setColumnCount(len(columns))
+        self.data_table.setHorizontalHeaderLabels(columns)
+        
+        # Populate table
+        self.data_table.setRowCount(len(self.df))
+        for i, (_, run) in enumerate(self.df.iterrows()):
+            # Map name and level
+            self.data_table.setItem(i, 0, QTableWidgetItem(run['map_name']))
+            self.data_table.setItem(i, 1, QTableWidgetItem(str(run['map_level'])))
+            
+            # Duration
+            mins = run['duration'] // 60
+            secs = run['duration'] % 60
+            self.data_table.setItem(i, 2, QTableWidgetItem(f"{mins:02d}:{secs:02d}"))
+            
+            # Character
+            char_text = ""
+            if run['character_id']:
+                char = self.db.get_character(run['character_id'])
+                if char:
+                    char_text = (f"{char['name']} (Level {char['level']} {char['class']}"
+                               f"{' - ' + char['ascendancy'] if char['ascendancy'] else ''})")
+            self.data_table.setItem(i, 3, QTableWidgetItem(char_text))
+            
+            # Build
+            build_text = ""
+            if run['build_id']:
+                build = self.db.get_build(run['build_id'])
+                if build:
+                    build_text = f"{build['name']} ({build['url']})"
+            self.data_table.setItem(i, 4, QTableWidgetItem(build_text))
+            
+            # Mechanics
+            mechanics = []
+            if run['has_breach']:
+                mechanics.append(f"Breach ({run['breach_count']})")
+            if run['has_delirium']:
+                mechanics.append("Delirium")
+            if run['has_expedition']:
+                mechanics.append("Expedition")
+            if run['has_ritual']:
+                mechanics.append("Ritual")
+            self.data_table.setItem(i, 5, QTableWidgetItem(", ".join(mechanics)))
+            
+            # Currency summary
+            currency_summary = []
+            for item in run['items']:
+                if isinstance(item, dict) and item.get('name', '').endswith('_Currency'):
+                    name = item['name'].replace('_Currency', '')
+                    count = item.get('stack_size', 0)
+                    currency_summary.append(f"{name} x{count}")
+            self.data_table.setItem(i, 6, QTableWidgetItem(", ".join(currency_summary)))
+            
+        # Adjust column widths
+        self.data_table.resizeColumnsToContents()
+        
+    def update_build_analysis(self):
+        # Clear the figure
+        self.build_figure.clear()
+        
+        # Create subplots for different metrics
+        gs = self.build_figure.add_gridspec(2, 2)
+        ax1 = self.build_figure.add_subplot(gs[0, 0])  # Map completion rate
+        ax2 = self.build_figure.add_subplot(gs[0, 1])  # Average duration
+        ax3 = self.build_figure.add_subplot(gs[1, :])  # Map level progression
+        
+        # Get selected build
+        build_id = self.build_combo.currentData()
+        
+        if build_id is not None:
+            # Filter data for selected build
+            build_df = self.df[self.df['build_id'] == build_id]
+            
+            if len(build_df) > 0:
+                # Map completion rate pie chart
+                complete = len(build_df[build_df['completion_status'] == 'complete'])
+                rips = len(build_df[build_df['completion_status'] == 'rip'])
+                ax1.pie([complete, rips], labels=['Complete', 'RIP'], colors=['#44ff44', '#ff4444'],
+                       autopct='%1.1f%%')
+                ax1.set_title('Map Completion Rate')
+                
+                # Average duration by map level
+                avg_duration = build_df.groupby('map_level')['duration'].mean() / 60  # Convert to minutes
+                ax2.bar(avg_duration.index, avg_duration.values)
+                ax2.set_xlabel('Map Level')
+                ax2.set_ylabel('Average Duration (minutes)')
+                ax2.set_title('Average Map Duration by Level')
+                
+                # Map level progression over time
+                ax3.plot(pd.to_datetime(build_df['start_time']), build_df['map_level'], marker='o')
+                ax3.set_xlabel('Date')
+                ax3.set_ylabel('Map Level')
+                ax3.set_title('Map Level Progression')
+                ax3.tick_params(axis='x', rotation=45)
+                
+                # Add summary text
+                total_maps = len(build_df)
+                avg_duration_all = build_df['duration'].mean() / 60
+                ax3.text(0.02, 0.98, 
+                        f'Total Maps: {total_maps}\n'
+                        f'Average Duration: {avg_duration_all:.1f}m\n'
+                        f'Highest Level: {build_df["map_level"].max()}',
+                        transform=ax3.transAxes,
+                        verticalalignment='top',
+                        bbox=dict(facecolor='#1a1a1a', alpha=0.8))
+            else:
+                for ax in [ax1, ax2, ax3]:
+                    ax.text(0.5, 0.5, 'No data available for selected build',
+                           horizontalalignment='center',
+                           verticalalignment='center',
+                           color='white')
+        else:
+            # Compare all builds
+            build_stats = []
+            for char in self.db.get_characters():
+                builds = self.db.get_builds(char['id'])
+                for build in builds:
+                    build_df = self.df[self.df['build_id'] == build['id']]
+                    if len(build_df) > 0:
+                        stats = {
+                            'name': f"{build['name']} ({char['name']})",
+                            'total_maps': len(build_df),
+                            'completion_rate': len(build_df[build_df['completion_status'] == 'complete']) / len(build_df) * 100,
+                            'avg_duration': build_df['duration'].mean() / 60,
+                            'highest_level': build_df['map_level'].max()
+                        }
+                        build_stats.append(stats)
+            
+            if build_stats:
+                build_df = pd.DataFrame(build_stats)
+                
+                # Completion rate comparison
+                ax1.bar(build_df['name'], build_df['completion_rate'])
+                ax1.set_xlabel('Build')
+                ax1.set_ylabel('Completion Rate (%)')
+                ax1.set_title('Map Completion Rate by Build')
+                ax1.tick_params(axis='x', rotation=45)
+                
+                # Average duration comparison
+                ax2.bar(build_df['name'], build_df['avg_duration'])
+                ax2.set_xlabel('Build')
+                ax2.set_ylabel('Average Duration (minutes)')
+                ax2.set_title('Average Map Duration by Build')
+                ax2.tick_params(axis='x', rotation=45)
+                
+                # Map level comparison
+                ax3.bar(build_df['name'], build_df['highest_level'])
+                ax3.set_xlabel('Build')
+                ax3.set_ylabel('Highest Map Level')
+                ax3.set_title('Highest Map Level by Build')
+                ax3.tick_params(axis='x', rotation=45)
+            else:
+                for ax in [ax1, ax2, ax3]:
+                    ax.text(0.5, 0.5, 'No map data available',
+                           horizontalalignment='center',
+                           verticalalignment='center',
+                           color='white')
+        
+        # Style the plots
+        for ax in [ax1, ax2, ax3]:
+            ax.set_facecolor('#2d2d2d')
+            ax.tick_params(colors='white')
+            ax.xaxis.label.set_color('white')
+            ax.yaxis.label.set_color('white')
+            ax.title.set_color('white')
+        
+        self.build_figure.patch.set_facecolor('#1a1a1a')
+        self.build_figure.tight_layout()
+        self.build_canvas.draw()
         
     def update_character_analysis(self):
         # Clear the figure
@@ -214,12 +436,15 @@ class DataWorkbenchDialog(QDialog):
         ax2 = self.character_figure.add_subplot(gs[0, 1])  # Average duration
         ax3 = self.character_figure.add_subplot(gs[1, :])  # Map level progression
         
-        # Get selected character
+        # Get selected character and build
         char_id = self.char_combo.currentData()
+        build_id = self.char_build_combo.currentData()
         
         if char_id is not None:
-            # Filter data for selected character
+            # Filter data for selected character and build
             char_df = self.df[self.df['character_id'] == char_id]
+            if build_id is not None:
+                char_df = char_df[char_df['build_id'] == build_id]
             
             if len(char_df) > 0:
                 # Map completion rate pie chart
@@ -399,19 +624,25 @@ class DataWorkbenchDialog(QDialog):
                 duration_mins = run['duration'] // 60
                 duration_secs = run['duration'] % 60
                 
-                # Get character info
+                # Get character and build info
                 char_info = ""
+                build_info = ""
                 if run['character_id']:
                     char = self.db.get_character(run['character_id'])
                     if char:
                         char_info = f"\nCharacter: {char['name']}"
+                if run['build_id']:
+                    build = self.db.get_build(run['build_id'])
+                    if build:
+                        build_info = f"\nBuild: {build['name']}"
                 
                 # Create data plate text
                 text = (f"Map: {run['map_name']} (Level {run['map_level']})\n"
                        f"Duration: {duration_mins:02d}:{duration_secs:02d}\n"
                        f"Mechanics: {mechanics_text}\n"
                        f"{currency_type}: {run['currency_count']}"
-                       f"{char_info}")
+                       f"{char_info}"
+                       f"{build_info}")
                 
                 annot.set_text(text)
             
@@ -526,54 +757,3 @@ class DataWorkbenchDialog(QDialog):
         ax.title.set_color('white')
         
         self.mechanic_canvas.draw()
-        
-    def update_raw_data_table(self):
-        # Set up table columns
-        columns = ['Map Name', 'Level', 'Duration', 'Character', 'Mechanics', 'Currency Found']
-        self.data_table.setColumnCount(len(columns))
-        self.data_table.setHorizontalHeaderLabels(columns)
-        
-        # Populate table
-        self.data_table.setRowCount(len(self.df))
-        for i, (_, run) in enumerate(self.df.iterrows()):
-            # Map name and level
-            self.data_table.setItem(i, 0, QTableWidgetItem(run['map_name']))
-            self.data_table.setItem(i, 1, QTableWidgetItem(str(run['map_level'])))
-            
-            # Duration
-            mins = run['duration'] // 60
-            secs = run['duration'] % 60
-            self.data_table.setItem(i, 2, QTableWidgetItem(f"{mins:02d}:{secs:02d}"))
-            
-            # Character
-            char_text = ""
-            if run['character_id']:
-                char = self.db.get_character(run['character_id'])
-                if char:
-                    char_text = (f"{char['name']} (Level {char['level']} {char['class']}"
-                               f"{' - ' + char['ascendancy'] if char['ascendancy'] else ''})")
-            self.data_table.setItem(i, 3, QTableWidgetItem(char_text))
-            
-            # Mechanics
-            mechanics = []
-            if run['has_breach']:
-                mechanics.append(f"Breach ({run['breach_count']})")
-            if run['has_delirium']:
-                mechanics.append("Delirium")
-            if run['has_expedition']:
-                mechanics.append("Expedition")
-            if run['has_ritual']:
-                mechanics.append("Ritual")
-            self.data_table.setItem(i, 4, QTableWidgetItem(", ".join(mechanics)))
-            
-            # Currency summary
-            currency_summary = []
-            for item in run['items']:
-                if isinstance(item, dict) and item.get('name', '').endswith('_Currency'):
-                    name = item['name'].replace('_Currency', '')
-                    count = item.get('stack_size', 0)
-                    currency_summary.append(f"{name} x{count}")
-            self.data_table.setItem(i, 5, QTableWidgetItem(", ".join(currency_summary)))
-            
-        # Adjust column widths
-        self.data_table.resizeColumnsToContents()

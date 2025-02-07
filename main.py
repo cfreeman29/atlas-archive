@@ -457,11 +457,14 @@ class MapTracker(QMainWindow):
     def on_character_selected(self, character_id):
         self.current_character = self.db.get_character(character_id)
         if self.current_character:
-            self.character_label.setText(
+            current_build = self.db.get_current_build(character_id)
+            character_text = (
                 f"Character: {self.current_character['name']} "
                 f"(Level {self.current_character['level']} {self.current_character['class']}"
-                f"{' - ' + self.current_character['ascendancy'] if self.current_character['ascendancy'] else ''})"
+                f"{' - ' + self.current_character['ascendancy'] if self.current_character['ascendancy'] else ''})\n"
+                f"Build: {current_build['name'] if current_build else 'No build selected'}"
             )
+            self.character_label.setText(character_text)
     
     def on_breach_icon_click(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
