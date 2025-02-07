@@ -2,7 +2,8 @@ import csv
 from datetime import datetime
 from pathlib import Path
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-                           QListWidget, QListWidgetItem, QFileDialog, QMessageBox)
+                           QListWidget, QListWidgetItem, QFileDialog, QMessageBox,
+                           QComboBox)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from ..utils.resource_path import get_resource_path
@@ -22,6 +23,8 @@ class MapRunsDialog(QDialog):
             'expedition': False,
             'ritual': False
         }
+        self.selected_character = None
+        self.selected_build = None
         self.setup_ui()
         self.load_runs()
         
@@ -29,7 +32,7 @@ class MapRunsDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(15)
         
-        # Top bar with stats and filters
+        # Top bar with stats, character filter, and mechanic filters
         top_bar = QHBoxLayout()
         
         # Stats label
@@ -39,6 +42,32 @@ class MapRunsDialog(QDialog):
         
         # Add stretch to push filters to the right
         top_bar.addStretch()
+        
+        # Character and Build filters
+        filter_layout = QHBoxLayout()
+        
+        # Character filter
+        filter_layout.addWidget(QLabel("Character:"))
+        self.char_combo = QComboBox()
+        self.char_combo.addItem("All Characters", None)
+        characters = self.db.get_characters()
+        for char in characters:
+            self.char_combo.addItem(
+                f"{char['name']} (Level {char['level']} {char['class']}"
+                f"{' - ' + char['ascendancy'] if char['ascendancy'] else ''}",
+                char['id']
+            )
+        self.char_combo.currentIndexChanged.connect(self.on_character_filter_changed)
+        filter_layout.addWidget(self.char_combo)
+        
+        # Build filter
+        filter_layout.addWidget(QLabel("Build:"))
+        self.build_combo = QComboBox()
+        self.build_combo.addItem("All Builds", None)
+        self.build_combo.currentIndexChanged.connect(self.on_build_filter_changed)
+        filter_layout.addWidget(self.build_combo)
+        
+        top_bar.addLayout(filter_layout)
         
         # Mechanic filter buttons
         filter_layout = QHBoxLayout()
@@ -98,7 +127,6 @@ class MapRunsDialog(QDialog):
         
         button_layout.addLayout(left_buttons)
         
-        
         button_layout.addStretch()
         
         # Clear DB button (right-aligned)
@@ -140,6 +168,25 @@ class MapRunsDialog(QDialog):
             QListWidget::item:hover {
                 background-color: #404040;
             }
+            QComboBox {
+                background-color: #2d2d2d;
+                color: #ffffff;
+                border: 1px solid #3d3d3d;
+                border-radius: 4px;
+                padding: 5px;
+                min-width: 200px;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QComboBox::down-arrow {
+                image: none;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #2d2d2d;
+                color: #ffffff;
+                selection-background-color: #4a4a4a;
+            }
             QPushButton {
                 background-color: #2d2d2d;
                 border: none;
@@ -163,6 +210,28 @@ class MapRunsDialog(QDialog):
             }
         """)
         
+    def update_build_filter(self):
+        """Update build filter dropdown based on selected character"""
+        self.build_combo.clear()
+        self.build_combo.addItem("All Builds", None)
+        
+        if self.selected_character:
+            builds = self.db.get_builds(self.selected_character)
+            for build in builds:
+                self.build_combo.addItem(build['name'], build['id'])
+                
+    def on_build_filter_changed(self, index):
+        """Handle build filter selection"""
+        self.selected_build = self.build_combo.currentData()
+        self.load_runs()
+        
+    def on_character_filter_changed(self, index):
+        """Handle character filter selection"""
+        self.selected_character = self.char_combo.currentData()
+        self.selected_build = None  # Reset build filter
+        self.update_build_filter()  # Update build dropdown
+        self.load_runs()
+        
     def toggle_filter(self):
         btn = self.sender()
         mech = btn.property('mechanic')
@@ -180,14 +249,22 @@ class MapRunsDialog(QDialog):
     def load_runs(self):
         all_runs = self.db.get_map_runs()
         
-        # Filter runs based on active mechanic filters
+        # Filter runs based on active mechanic filters, selected character, and build
         runs = []
         for run in all_runs:
             include_run = True
+            # Check mechanic filters
             for mech, active in self.active_filters.items():
                 if active and not run[f'has_{mech}']:
                     include_run = False
                     break
+            # Check character filter
+            if self.selected_character is not None and run['character_id'] != self.selected_character:
+                include_run = False
+            # Check build filter
+            if include_run and self.selected_build is not None:
+                if run['build_id'] != self.selected_build:
+                    include_run = False
             if include_run:
                 runs.append(run)
                 
@@ -205,6 +282,20 @@ class MapRunsDialog(QDialog):
             duration_mins = run['duration'] // 60
             duration_secs = run['duration'] % 60
             total_duration += run['duration']
+            
+            # Get character and build info if available
+            character_info = ""
+            build_info = ""
+            if run['character_id']:
+                char = self.db.get_character(run['character_id'])
+                if char:
+                    character_info = (f" | Character: {char['name']} "
+                                    f"(Level {char['level']} {char['class']}"
+                                    f"{' - ' + char['ascendancy'] if char['ascendancy'] else ''})")
+            if run['build_id']:
+                build = self.db.get_build(run['build_id'])
+                if build:
+                    build_info = f" | Build: {build['name']} ({build['url']})"
             
             # Format item count
             item_count = len([item for item in run['items'] 
@@ -237,7 +328,9 @@ class MapRunsDialog(QDialog):
                         f"Boss: {boss_text} | "
                         f"Items: {item_count} | "
                         f"Status: {'Complete' if run['completion_status'] == 'complete' else 'RIP'}"
-                        f"{mechanics_str}")
+                        f"{character_info}"
+                        f"{mechanics_str}"
+                        f"{build_info}")
             
             list_item = QListWidgetItem(item_text)
             list_item.setData(Qt.ItemDataRole.UserRole, run)  # Store run data
@@ -268,80 +361,96 @@ class MapRunsDialog(QDialog):
     def export_to_csv(self):
         file_name, _ = QFileDialog.getSaveFileName(
             self,
-            "Export Map Runs",
-            str(Path.home() / "map_runs.csv"),
-            "CSV Files (*.csv)"
-        )
-        
-        if file_name:
-            runs = self.db.get_map_runs()
-            with open(file_name, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
-                # Write header with all columns
-                writer.writerow([
-                    'ID', 'Map Name', 'Map Level', 'Boss Count', 'Start Time', 'Duration',
-                    'Items', 'Status', 'Has Breach', 'Has Delirium', 'Has Expedition',
-                    'Has Ritual', 'Breach Count'
-                ])
-                # Write data
-                for run in runs:
-                    items_text = ", ".join(
-                        f"{item['name']} x{item['stack_size']}" 
-                        for item in run['items']
-                        if item['name'] != 'Unknown Item'
-                        and not item['name'].startswith('Item Class:')
-                        and not item['name'].startswith('Stack Size:')
-                        and not item['name'].startswith('Rarity:')
-                    )
-                    duration_mins = run['duration'] // 60
-                    duration_secs = run['duration'] % 60
-                    writer.writerow([
-                        run['id'],
-                        run['map_name'],
-                        run['map_level'],
-                        run['boss_count'],
-                        run['start_time'],
-                        f"{duration_mins:02d}:{duration_secs:02d}",
-                        items_text if items_text else "None",
-                        'Complete' if run['completion_status'] == 'complete' else 'RIP',
-                        'Yes' if run['has_breach'] else 'No',
-                        'Yes' if run['has_delirium'] else 'No',
-                        'Yes' if run['has_expedition'] else 'No',
-                        'Yes' if run['has_ritual'] else 'No',
-                        run['breach_count']
-                    ])
-                    
-    def import_from_csv(self):
-        file_name, _ = QFileDialog.getOpenFileName(
-            self,
-            "Import Map Runs",
-            str(Path.home()),
+            "Export Data",
+            str(Path.home() / "atlas_archive_export.csv"),
             "CSV Files (*.csv)"
         )
         
         if file_name:
             try:
-                with open(file_name, 'r', newline='', encoding='utf-8') as f:
-                    reader = csv.DictReader(f)
-                    self.db.import_from_csv(reader)
-                    self.load_runs()
-                    QMessageBox.information(
-                        self,
-                        "Import Successful",
-                        "Map runs have been imported successfully."
-                    )
+                self.db.export_to_csv(file_name)
+                QMessageBox.information(
+                    self,
+                    "Export Successful",
+                    f"Data has been exported to:\n"
+                    f"{file_name}\n"
+                    f"{file_name.replace('.csv', '_characters.csv')}\n"
+                    f"{file_name.replace('.csv', '_builds.csv')}"
+                )
             except Exception as e:
                 QMessageBox.critical(
                     self,
-                    "Import Error",
-                    f"Failed to import map runs: {str(e)}"
+                    "Export Error",
+                    f"Failed to export data: {str(e)}"
                 )
+                    
+    def import_from_csv(self):
+        # Get characters file
+        chars_file, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import Characters CSV",
+            str(Path.home()),
+            "CSV Files (*_characters.csv)"
+        )
+        
+        if not chars_file:
+            return
+            
+        # Get maps file
+        maps_file, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import Maps CSV",
+            str(Path.home()),
+            "CSV Files (*_maps.csv)"
+        )
+        
+        if not maps_file:
+            return
+            
+        # Get builds file (optional)
+        builds_file, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import Builds CSV (Optional)",
+            str(Path.home()),
+            "CSV Files (*_builds.csv)"
+        )
+        
+        try:
+            self.db.import_from_csv(chars_file, maps_file, builds_file)
+            self.load_runs()
+            # Reset filters
+            self.selected_character = None
+            self.selected_build = None
+            # Refresh character filter
+            self.char_combo.clear()
+            self.char_combo.addItem("All Characters", None)
+            characters = self.db.get_characters()
+            for char in characters:
+                self.char_combo.addItem(
+                    f"{char['name']} (Level {char['level']} {char['class']}"
+                    f"{' - ' + char['ascendancy'] if char['ascendancy'] else ''}",
+                    char['id']
+                )
+            # Reset build filter
+            self.build_combo.clear()
+            self.build_combo.addItem("All Builds", None)
+            QMessageBox.information(
+                self,
+                "Import Successful",
+                "Data has been imported successfully."
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Import Error",
+                f"Failed to import data: {str(e)}"
+            )
                 
     def clear_database(self):
         reply = QMessageBox.question(
             self,
             "Clear Database",
-            "Are you sure you want to clear all map run data? This action cannot be undone.",
+            "Are you sure you want to clear all data? This will remove all characters, builds, and map runs. This action cannot be undone.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
@@ -349,10 +458,16 @@ class MapRunsDialog(QDialog):
         if reply == QMessageBox.StandardButton.Yes:
             self.db.clear_database()
             self.load_runs()
+            # Refresh character filter
+            self.char_combo.clear()
+            self.char_combo.addItem("All Characters", None)
+            # Clear build filter
+            self.build_combo.clear()
+            self.build_combo.addItem("All Builds", None)
             QMessageBox.information(
                 self,
                 "Database Cleared",
-                "All map run data has been cleared successfully."
+                "All data has been cleared successfully."
             )
             
     def show_data_analysis(self):

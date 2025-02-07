@@ -46,6 +46,7 @@ def generate_map_run_card(run_data, save_path):
             map_font = ImageFont.truetype("arial.ttf", 24)    # Map name
             header_font = ImageFont.truetype("arial.ttf", 18)  # Section headers
             normal_font = ImageFont.truetype("arial.ttf", 16)  # Items
+            char_font = ImageFont.truetype("arial.ttf", 12)  # Items
         except:
             title_font = ImageFont.load_default()
             header_font = ImageFont.load_default()
@@ -101,9 +102,32 @@ def generate_map_run_card(run_data, save_path):
         draw.text((info_x, info_y), f"{boss_text} | {start_time.strftime('%Y-%m-%d %H:%M:%S')}", 
                  fill=(150, 150, 150), font=normal_font)
         
+        # Character info (if available)
+        if run_data.get('character_id') and run_data.get('db'):
+            char = run_data['db'].get_character(run_data['character_id'])
+            if char:
+                # Draw character name and build info
+                char_x = width - margin - 400  # Further left for longer text
+                char_y = margin + 40  # Higher up, near the logo
+                
+                # Character name
+                char_text = f"{char['name']} (Level {char['level']} {char['class']}"
+                if char['ascendancy']:
+                    char_text += f" - {char['ascendancy']}"
+                char_text += ")"
+                draw.text((char_x, char_y), char_text, fill=(68, 255, 68), font=normal_font)
+                
+                # Build info
+                if run_data.get('build_id'):
+                    build = run_data['db'].get_build(run_data['build_id'])
+                    if build:
+                        build_y = char_y + normal_font.size + 5  # Add some spacing
+                        build_text = f"Build: {build['name']} ({build['url']})"
+                        draw.text((char_x, build_y), build_text, fill=(150, 150, 150), font=char_font)
+
         # Mechanics section (right aligned with proper spacing)
         mech_x = width - margin - 150  # Closer to right edge
-        mech_title_y = margin + 110
+        mech_title_y = margin + 140  # Moved down slightly to accommodate character info
         draw.text((mech_x, mech_title_y), "Mechanics:", fill=(255, 255, 255), font=header_font)
         
         # Only show active mechanics
@@ -117,8 +141,8 @@ def generate_map_run_card(run_data, save_path):
         if run_data.get('has_ritual', False):
             active_mechanics.append(('ritual', None))
         
-        # Draw mechanics vertically
-        mech_y = mech_title_y + 35
+        # Draw mechanics vertically (adjusted starting position)
+        mech_y = mech_title_y + 35  # This maintains the same spacing from the "Mechanics:" text
         icon_size = 48  # Slightly smaller icons
         icon_spacing = 55  # Consistent spacing
         

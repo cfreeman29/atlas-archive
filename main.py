@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                            QHBoxLayout, QPushButton, QLabel, QDialog, QFileDialog,
-                           QDialogButtonBox, QSpinBox)
+                           QDialogButtonBox, QSpinBox, QMessageBox)
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap, QCursor, QIcon
 
@@ -16,6 +16,7 @@ from src.dialogs.boss_kill_dialog import BossKillDialog
 from src.dialogs.map_completion_dialog import MapCompletionDialog
 from src.dialogs.map_runs_dialog import MapRunsDialog
 from src.dialogs.item_entry_dialog import ItemEntryDialog
+from src.dialogs.character_dialog import CharacterDialog
 
 class ClickableLabel(QLabel):
     def __init__(self, base_path, parent=None):
@@ -66,6 +67,7 @@ class MapTracker(QMainWindow):
         self.current_map_start = None
         self.current_map_seed = None
         self.current_map_duration = timedelta()
+        self.current_character = None
         self.monitoring = False
         self.map_timer = QTimer()
         self.map_timer.timeout.connect(self.update_map_timer)
@@ -74,6 +76,184 @@ class MapTracker(QMainWindow):
         # Setup UI
         self.setup_ui()
         self.setup_style()
+        
+        # Check for client.txt on startup
+        if not self.settings.get('log_path'):
+            # Show initial setup dialog
+            context_dialog = QDialog(self)
+            context_dialog.setWindowTitle("Welcome to Atlas Archive")
+            context_dialog.setMinimumWidth(500)
+            context_dialog.setStyleSheet("""
+                QDialog {
+                    background-color: #1a1a1a;
+                }
+                QLabel {
+                    color: #ffffff;
+                    font-size: 14px;
+                    margin: 10px;
+                }
+                QLabel#header {
+                    color: #ff4444;
+                    font-size: 18px;
+                    font-weight: bold;
+                }
+                QPushButton {
+                    background-color: #8b0000;
+                    border: none;
+                    padding: 12px 24px;
+                    color: white;
+                    border-radius: 4px;
+                    font-size: 14px;
+                    min-width: 200px;
+                }
+                QPushButton:hover {
+                    background-color: #a00000;
+                }
+            """)
+            
+            layout = QVBoxLayout(context_dialog)
+            layout.setSpacing(20)
+            layout.setContentsMargins(30, 30, 30, 30)
+            
+            # Header
+            header = QLabel("⚠️ No Client.txt Found")
+            header.setObjectName("header")
+            header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(header)
+            
+            # Explanation text
+            message = QLabel(
+                "This appears to be your first time running Atlas Archive, "
+                "or your settings file has been reset.\n\n"
+                "To begin tracking your map runs, you'll need to select your "
+                "Path of Exile 2 Client.txt file. This file contains the game "
+                "logs that Atlas Archive uses to automatically detect and track "
+                "your map runs."
+            )
+            message.setWordWrap(True)
+            message.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            layout.addWidget(message)
+            
+            # Button to select client.txt
+            select_button = QPushButton("📁 Select Client.txt")
+            select_button.clicked.connect(context_dialog.accept)
+            select_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            
+            # Center the button
+            button_layout = QHBoxLayout()
+            button_layout.addStretch()
+            button_layout.addWidget(select_button)
+            button_layout.addStretch()
+            layout.addLayout(button_layout)
+            
+            # Show dialog and wait for user to click button
+            context_dialog.exec()
+            
+            # After user clicks button, try to find client.txt
+            potential_paths = [
+                Path.home() / "Documents" / "My Games" / "Path of Exile 2" / "logs" / "Client.txt",
+                Path.home() / "Documents" / "My Games" / "Path of Exile 2 Beta" / "logs" / "Client.txt",
+            ]
+            
+            found_path = None
+            for path in potential_paths:
+                if path.exists():
+                    found_path = str(path)
+                    break
+            
+            if found_path:
+                # Found client.txt, ask user if they want to use it
+                dialog = QDialog(self)
+                dialog.setWindowTitle("Client.txt Found")
+                dialog.setMinimumWidth(500)
+                dialog.setStyleSheet("""
+                    QDialog {
+                        background-color: #1a1a1a;
+                    }
+                    QLabel {
+                        color: #ffffff;
+                        font-size: 14px;
+                        margin: 10px;
+                    }
+                    QLabel#header {
+                        color: #44ff44;
+                        font-size: 18px;
+                        font-weight: bold;
+                    }
+                    QPushButton {
+                        background-color: #006400;
+                        border: none;
+                        padding: 12px 24px;
+                        color: white;
+                        border-radius: 4px;
+                        font-size: 14px;
+                        min-width: 120px;
+                        margin: 5px;
+                    }
+                    QPushButton:hover {
+                        background-color: #008000;
+                    }
+                    QPushButton#no-btn {
+                        background-color: #8b0000;
+                    }
+                    QPushButton#no-btn:hover {
+                        background-color: #a00000;
+                    }
+                """)
+                
+                layout = QVBoxLayout(dialog)
+                layout.setSpacing(20)
+                layout.setContentsMargins(30, 30, 30, 30)
+                
+                # Header
+                header = QLabel("✅ Client.txt Located")
+                header.setObjectName("header")
+                header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                layout.addWidget(header)
+                
+                # Path display
+                path_label = QLabel(f"Found at:\n{found_path}")
+                path_label.setWordWrap(True)
+                path_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+                layout.addWidget(path_label)
+                
+                # Question
+                question = QLabel("Would you like to use this file?")
+                question.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                layout.addWidget(question)
+                
+                # Custom button layout instead of QDialogButtonBox
+                button_layout = QHBoxLayout()
+                
+                yes_btn = QPushButton("✓ Yes, Use This File")
+                yes_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                yes_btn.clicked.connect(dialog.accept)
+                
+                no_btn = QPushButton("✗ No, Select Different")
+                no_btn.setObjectName("no-btn")
+                no_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                no_btn.clicked.connect(dialog.reject)
+                
+                button_layout.addStretch()
+                button_layout.addWidget(yes_btn)
+                button_layout.addWidget(no_btn)
+                button_layout.addStretch()
+                
+                layout.addLayout(button_layout)
+                
+                if dialog.exec() == QDialog.DialogCode.Accepted:
+                    self.settings['log_path'] = found_path
+                    self.save_settings()
+                    self.log_parser = LogParser(found_path)
+                    self.map_name_label.setText(f"Log file selected: {Path(found_path).name}")
+                    self.activateWindow()  # Bring window to front
+                    self.raise_()  # Ensure it's on top
+                else:
+                    # User declined, show file picker
+                    self.select_log_file()
+            else:
+                # No client.txt found, show file picker
+                self.select_log_file()
 
     def setup_style(self):
         self.setStyleSheet("""
@@ -117,6 +297,10 @@ class MapTracker(QMainWindow):
                 font-size: 24px;
                 font-weight: bold;
                 color: #ff4444;
+            }
+            QLabel#character {
+                font-size: 18px;
+                color: #44ff44;
             }
             QLabel#timer {
                 font-size: 20px;
@@ -165,6 +349,10 @@ class MapTracker(QMainWindow):
         self.select_log_btn.clicked.connect(self.select_log_file)
         control_layout.addWidget(self.select_log_btn)
         
+        self.select_char_btn = QPushButton("Select Character")
+        self.select_char_btn.clicked.connect(self.show_character_dialog)
+        control_layout.addWidget(self.select_char_btn)
+        
         self.view_runs_btn = QPushButton("View Runs")
         self.view_runs_btn.clicked.connect(self.show_runs_dialog)
         control_layout.addWidget(self.view_runs_btn)
@@ -179,6 +367,10 @@ class MapTracker(QMainWindow):
         self.map_name_label = QLabel("Not in map")
         self.map_name_label.setObjectName("map_name")
         map_layout.addWidget(self.map_name_label)
+        
+        self.character_label = QLabel("No character selected")
+        self.character_label.setObjectName("character")
+        map_layout.addWidget(self.character_label)
         
         self.timer_label = QLabel("00:00")
         self.timer_label.setObjectName("timer")
@@ -257,6 +449,23 @@ class MapTracker(QMainWindow):
         # Connect breach icon click to counter toggle
         self.breach_icon.mousePressEvent = self.on_breach_icon_click
 
+    def show_character_dialog(self):
+        dialog = CharacterDialog(self.db, self)
+        dialog.character_selected.connect(self.on_character_selected)
+        dialog.exec()
+    
+    def on_character_selected(self, character_id):
+        self.current_character = self.db.get_character(character_id)
+        if self.current_character:
+            current_build = self.db.get_current_build(character_id)
+            character_text = (
+                f"Character: {self.current_character['name']} "
+                f"(Level {self.current_character['level']} {self.current_character['class']}"
+                f"{' - ' + self.current_character['ascendancy'] if self.current_character['ascendancy'] else ''})\n"
+                f"Build: {current_build['name'] if current_build else 'No build selected'}"
+            )
+            self.character_label.setText(character_text)
+    
     def on_breach_icon_click(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.breach_icon.active = not self.breach_icon.active
@@ -292,11 +501,21 @@ class MapTracker(QMainWindow):
             # Update log parser
             self.log_parser = LogParser(file_name)
             self.map_name_label.setText(f"Log file selected: {Path(file_name).name}")
+            self.activateWindow()  # Bring window to front
+            self.raise_()  # Ensure it's on top
+        elif not self.settings.get('log_path'):
+            # If this was the initial startup and user cancelled, show warning
+            self.map_name_label.setText("Warning: No Client.txt selected. Please select a log file to begin monitoring.")
             
     def toggle_monitoring(self):
         if not self.monitoring:
             if not self.log_parser.log_path:
                 self.map_name_label.setText("Please select Client.txt first")
+                return
+            
+            if not self.current_character:
+                QMessageBox.warning(self, "No Character Selected", 
+                                  "Please select a character before starting map monitoring.")
                 return
                 
             self.monitoring = True
@@ -433,7 +652,8 @@ class MapTracker(QMainWindow):
                     self.delirium_icon.is_active(),
                     self.expedition_icon.is_active(),
                     self.ritual_icon.is_active(),
-                    self.breach_count_spin.value()
+                    self.breach_count_spin.value(),
+                    self.current_character['id'] if self.current_character else None
                 )
                 self.current_map_start = None
                 self.current_map_seed = None
