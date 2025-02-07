@@ -25,29 +25,6 @@ class DataWorkbenchDialog(QDialog):
         # Create tab widget
         self.tab_widget = QTabWidget()
         
-        # Build Analysis Tab
-        build_tab = QWidget()
-        build_layout = QVBoxLayout(build_tab)
-        
-        # Build selection controls
-        build_controls_layout = QHBoxLayout()
-        
-        self.build_combo = QComboBox()
-        self.build_combo.addItem('All Builds')
-        self.build_combo.currentIndexChanged.connect(self.update_build_analysis)
-        build_controls_layout.addWidget(QLabel("Build:"))
-        build_controls_layout.addWidget(self.build_combo)
-        
-        build_controls_layout.addStretch()
-        build_layout.addLayout(build_controls_layout)
-        
-        # Matplotlib figure for build analysis
-        self.build_figure = Figure(figsize=(8, 6))
-        self.build_canvas = FigureCanvas(self.build_figure)
-        build_layout.addWidget(self.build_canvas)
-        
-        self.tab_widget.addTab(build_tab, "Build Analysis")
-        
         # Character Analysis Tab
         character_tab = QWidget()
         character_layout = QVBoxLayout(character_tab)
@@ -79,6 +56,29 @@ class DataWorkbenchDialog(QDialog):
         character_layout.addWidget(self.character_canvas)
         
         self.tab_widget.addTab(character_tab, "Character Analysis")
+        
+        # Build Analysis Tab
+        build_tab = QWidget()
+        build_layout = QVBoxLayout(build_tab)
+        
+        # Build selection controls
+        build_controls_layout = QHBoxLayout()
+        
+        self.build_combo = QComboBox()
+        self.build_combo.addItem('All Builds')
+        self.build_combo.currentIndexChanged.connect(self.update_build_analysis)
+        build_controls_layout.addWidget(QLabel("Build:"))
+        build_controls_layout.addWidget(self.build_combo)
+        
+        build_controls_layout.addStretch()
+        build_layout.addLayout(build_controls_layout)
+        
+        # Matplotlib figure for build analysis
+        self.build_figure = Figure(figsize=(8, 6))
+        self.build_canvas = FigureCanvas(self.build_figure)
+        build_layout.addWidget(self.build_canvas)
+        
+        self.tab_widget.addTab(build_tab, "Build Analysis")
         
         # Currency Analysis Tab
         currency_tab = QWidget()
